@@ -4,6 +4,7 @@
 # Source the helpers script
 source ./spc-helpers.sh
 
+# Check if user has internet connection
 if ! check_connection; then
   echo "Check your internet connection"
   exit 1
