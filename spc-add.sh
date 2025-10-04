@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script using for turning on smartplug with tasmota
+# Script using for adding smartplug with tasmota firmware to the database
 
 # Source the helpers script
 source ./spc-helpers.sh
