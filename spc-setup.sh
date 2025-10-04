@@ -10,6 +10,12 @@ sudo apt update
 sudo apt upgrade -y
 sudo apt install -y git curl sqlite3 jq
 
+# Check if the installation was successful
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to install dependencies."
+    exit 1
+fi
+
 # Source the helpers script
 source ./spc-helpers.sh
 
