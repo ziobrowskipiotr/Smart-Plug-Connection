@@ -61,6 +61,12 @@ if (( STATUS_CODE!=200 )); then
   exit 1
 fi
 
+# Check if the device is running Tasmota firmware
+if ! check_tasmota_firmware "$IP"; then
+  echo "Device is not running Tasmota firmware"
+  exit 1
+fi
+
 # Check MAC address of the device
 ping -c 1 -W 1 "$IP" &> /dev/null # Send a single ping request with a 1 second timeout
 MAC_ADDRESS=$(ip neigh show "$IP" | awk '{print $5}')
@@ -82,7 +88,7 @@ echo "Smartplug with IP address \"$IP\" is available"
 if (check_MAC_in_db "$MAC_ADDRESS"); then
     echo "Device with MAC address $MAC_ADDRESS is already in the database"
     echo "Changing name and IP address of the device..."
-    sqlite3 "$DB_FILE" "UPDATE devices SET ip = '$IP', name = '$NAME' WHERE mac = '$MAC_ADDRESS';"
+    sqlite3 "$DB_FILE" "UPDATE devices SET ipv4 = '$IP', name = '$NAME' WHERE mac = '$MAC_ADDRESS';"
     if [ $? -ne 0 ]; then
         echo "Error: Failed to update the device in the database."
         exit 1
