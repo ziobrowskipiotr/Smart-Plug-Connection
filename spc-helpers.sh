@@ -37,3 +37,37 @@ check_MAC_in_db() {
     return 1
   fi
 }
+
+# Function for validating IPv4 CIDR notation
+function validate_ipv4_cidr() {
+  local ip_cidr=$1
+  local stat=1
+
+  # Regex for checking format x.x.x.x/x
+  if [[ $ip_cidr =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}/([0-9]{1,2})$ ]]; then
+    # Zapisuje dopasowane grupy do tablicy
+    read -ra parts <<< "${BASH_REMATCH[0]}"
+
+    # Divide into IP and CIDR prefix
+    IFS='/' read -ra addr_parts <<< "$parts"
+    local ip=${addr_parts[0]}
+    local cidr=${addr_parts[1]}
+
+    # Check CIDR prefix (0-32)
+    if (( cidr >= 0 && cidr <= 32 )); then
+      # Divide IP address into octets
+      IFS='.' read -ra octets <<< "$ip"
+
+      # Check if each octet is in the range 0-255
+      if [[ ${octets[0]} -le 255 && \
+            ${octets[1]} -le 255 && \
+            ${octets[2]} -le 255 && \
+            ${octets[3]} -le 255 ]]; then
+        # Address is valid
+        stat=0
+      fi
+    fi
+  fi
+  
+  return $stat
+}
