@@ -1,6 +1,9 @@
 #!/bin/bash
 # Script with helping functions and variables
 
+# Source logging functions
+source ./spc-logging.sh
+
 # Variables for database file
 DB_FILE="spc.db"
 SCHEMA_FILE="schema.sql"
