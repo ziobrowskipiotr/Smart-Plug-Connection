@@ -1,12 +1,15 @@
 #!/bin/bash
 # Script with helping functions and variables
 
+# Get the directory of the current script
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 # Source logging functions
-source ./spc-logging.sh
+source "$SCRIPT_DIR/spc-logging.sh"
 
 # Variables for database file
-DB_FILE="spc.db"
-SCHEMA_FILE="schema.sql"
+DB_FILE="$SCRIPT_DIR/spc.db"
+SCHEMA_FILE="$SCRIPT_DIR/schema.sql"
 
 # Function for checking connectivity
 check_connection() {

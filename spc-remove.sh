@@ -3,7 +3,9 @@
 # Remove smartplug from DB. Supports optional --name and/or --ip.
 # If no flags provided, prompts interactively for name (no interactive IP prompt).
 
-source ./spc-helpers.sh
+# Get the directory of the current script
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+source "$SCRIPT_DIR/spc-helpers.sh"
 
 show_usage() {
   cat <<EOF

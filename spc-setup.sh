@@ -1,17 +1,21 @@
 #!/bin/bash
+
 # Script for setting up the Smart-Plug-Connection environment
 if [[ "$EUID" -ne 0 ]]; then
   LOG_FATAL "This command must be running with root privileges"
   exit 1
 fi
 
+# Get the directory of the current script
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 # Source the helpers script
-source ./spc-helpers.sh
+source "$SCRIPT_DIR/spc-helpers.sh"
 
 # Update and install dependencies
 sudo apt update
 sudo apt upgrade -y
-sudo apt install -y git curl sqlite3 jq
+sudo apt install -y git curl sqlite3 jq arp-scan
 sudo curl -fsSL https://tailscale.com/install.sh | sh
 
 # Check if the installation was successful
@@ -92,6 +96,19 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 LOG_INFO "Database '$DB_FILE' initialized successfully."
+
+# Create a directory for private scripts and programs if it doesn't exist
+if [ ! -d ~/bin ]; then
+    sudo mkdir ~/bin
+fi
+# Check if the directory was created successfully
+if directory_exists ~/bin; then
+    LOG_FATAL "Failed to create directory ~/bin"
+    exit 1
+fi
+
+# Create symbolic link to the scripts in ~/bin
+ln -s ~/Smart-Plug-Connection/spc.sh ~/bin/spc
 
 LOG_INFO "Installation complete."
 exit 0

@@ -4,17 +4,8 @@ if [ "$EUID" -ne 0 ]; then
   LOG_FATAL "This command must be running with root privileges"
   exit 1
 fi
-
-# Create a directory for private scripts and programs if it doesn't exist
-if [ ! -d ~/bin ]; then
-    sudo mkdir ~/bin
-fi
-# Check if the directory was created successfully
-if directory_exists ~/bin; then
-    LOG_FATAL "Failed to create directory ~/bin"
-    exit 1
-fi
-cd ~/bin
+# Go to home directory
+cd ~
 # Clone the repository
 sudo git clone https://github.com/ziobrowskipiotr/Smart-Plug-Connection.git
 # Check if the git clone was successful
@@ -29,6 +20,10 @@ if ! directory_exists Smart-Plug-Connection; then
 fi
 # Give execute permission to all scripts in the cloned repository
 sudo chmod -R +x Smart-Plug-Connection
-cd Smart-Plug-Connection
 # Run the setup script
-sudo ./setup.sh
+cd Smart-Plug-Connection
+if ! file_exists spc-setup.sh; then
+    LOG_FATAL "Setup script not found in the cloned repository"
+    exit 1
+fi
+sudo ./spc-setup.sh

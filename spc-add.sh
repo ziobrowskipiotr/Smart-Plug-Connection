@@ -1,8 +1,11 @@
 #!/bin/bash
 # Script using for adding smartplug with tasmota firmware to the database
 
+# Get the directory of the current script
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 # Source the helpers script
-source ./spc-helpers.sh
+source "$SCRIPT_DIR/spc-helpers.sh"
 
 # Function to display usage information
 show_usage() {
