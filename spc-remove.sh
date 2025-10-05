@@ -40,7 +40,7 @@ while [[ $# -gt 0 ]]; do
         NAME="$2"
         shift 2
       else
-        echo "ERROR: Missing value for --name" >&2
+        LOG_ERROR "Missing value for --name"
         exit 1
       fi
       ;;
@@ -49,12 +49,12 @@ while [[ $# -gt 0 ]]; do
         IP="$2"
         shift 2
       else
-        echo "ERROR: Missing value for --ip" >&2
+        LOG_ERROR "Missing value for --ip"
         exit 1
       fi
       ;;
     -*)
-      echo "ERROR: Unknown option: $1" >&2
+      LOG_ERROR "Unknown option: $1"
       show_usage
       exit 1
       ;;
@@ -74,7 +74,7 @@ if [[ -n "$NAME" ]]; then
   # find device by name
   DEVICE_ID=$(sqlite3 "$DB_FILE" "SELECT id FROM devices WHERE name = ?;" "$NAME")
   if [[ -z "$DEVICE_ID" ]]; then
-    echo "ERROR: Device with name \"$NAME\" not found in database." >&2
+    LOG_FATAL "Device with name \"$NAME\" not found in database."
     exit 1
   fi
   DEVICE_NAME="$NAME"
@@ -82,7 +82,7 @@ else
   # use IP (we know IP is non-empty here)
   DEVICE_ID=$(sqlite3 "$DB_FILE" "SELECT id FROM devices WHERE ipv4 = ?;" "$IP")
   if [[ -z "$DEVICE_ID" ]]; then
-    echo "ERROR: Device with IP \"$IP\" not found in database." >&2
+    LOG_FATAL "Device with IP \"$IP\" not found in database."
     exit 1
   fi
   # get friendly name if any
@@ -92,16 +92,16 @@ fi
 # Confirm removal
 read -p "Are you sure you want to remove device \"$DEVICE_NAME\" (id=$DEVICE_ID)? (y/N): " CONFIRM
 if [[ ! "$CONFIRM" =~ ^[yY](es)?$ ]]; then
-  echo "Operation cancelled."
+  LOG_INFO "Operation cancelled."
   exit 0
 fi
 
 # Delete
 sqlite3 "$DB_FILE" "DELETE FROM devices WHERE id = ?;" "$DEVICE_ID"
 if [[ $? -ne 0 ]]; then
-  echo "ERROR: Failed to remove device \"$DEVICE_NAME\" (id=$DEVICE_ID)." >&2
+  LOG_FATAL "Failed to remove device \"$DEVICE_NAME\" (id=$DEVICE_ID)."
   exit 1
 fi
 
-echo "Device \"$DEVICE_NAME\" (id=$DEVICE_ID) removed successfully."
+LOG_INFO "Device \"$DEVICE_NAME\" (id=$DEVICE_ID) removed successfully."
 exit 0

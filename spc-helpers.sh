@@ -23,6 +23,16 @@ file_exists() {
   fi
 }
 
+# Function for checking if directory exists
+directory_exists() {
+  local dir="$1"
+  if [ -d "$dir" ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 # Function for checking the state of the smartplug
 check_state(){
   local state=$(curl -s "http://$1/cm?cmnd=Power" | jq -r '.POWER')
@@ -72,7 +82,7 @@ function get_connector_ip_and_mask() {
   local count=${#ip_list[@]}
 
   if [ "$count" -eq 0 ]; then
-    echo "ERROR: Could not find an active local IPv4 address." >&2
+    LOG_FATAL "Could not find an active local IPv4 address."
     return 1
   fi
 
@@ -94,7 +104,7 @@ function get_connector_ip_and_mask() {
       echo "${ip_list[$((choice - 1))]}"
       return 0
     else
-      echo "Invalid selection. Please try again." >&2
+      LOG_WARN "Invalid selection. Please try again."
     fi
   done
 }
@@ -158,20 +168,20 @@ function validate_device_name() {
 
   # Check if the name empty?
   if [[ -z "$name" ]]; then
-    echo "ERROR: Device name cannot be empty." >&2
+    LOG_ERROR "ERROR: Device name cannot be empty."
     return 1
   fi
 
   # Check if the name contain only allowed characters (and no spaces)?
   if [[ ! "$name" =~ ^[a-zA-Z0-9_-]+$ ]]; then
-    echo "ERROR: Name contains invalid characters or spaces." >&2
-    echo "       Only letters, numbers, hyphens (-), and underscores (_) are allowed." >&2
+    LOG_ERROR "Name contains invalid characters or spaces."
+    LOG_ERROR "Only letters, numbers, hyphens (-), and underscores (_) are allowed."
     return 1
   fi
 
   # Check if the name is of an appropriate length (e.g., 3 to 30 characters)?
   if (( ${#name} < 3 || ${#name} > 30 )); then
-    echo "ERROR: Name must be between 3 and 30 characters long." >&2
+    LOG_ERROR "Name must be between 3 and 30 characters long."
     return 1
   fi
 
@@ -187,7 +197,7 @@ function check_tasmota_firmware() {
 
   # Check if the argument is provided
   if [[ -z "$ip" ]]; then
-    echo "ERROR: No IP address provided to check_tasmota_firmware function." >&2
+    LOG_ERROR "No IP address provided to check_tasmota_firmware function."
     return 1
   fi
 
