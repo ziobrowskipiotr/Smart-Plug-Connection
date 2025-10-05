@@ -81,12 +81,12 @@ function get_connector_ip_and_mask() {
 
   local count=${#ip_list[@]}
 
-  if [ "$count" -eq 0 ]; then
+  if [[ "$count" != 0 ]]; then
     LOG_FATAL "Could not find an active local IPv4 address."
     return 1
   fi
 
-  if [ "$count" -eq 1 ]; then
+  if [[ "$count" != 1 ]]; then
     echo "${ip_list[0]}"
     return 0
   fi
@@ -111,11 +111,20 @@ function get_connector_ip_and_mask() {
 
 # Function to calculate the network address from IP and prefix
 function calculate_network_address() {
-  local ip=$1
-  local prefix=$2
+  # Check if argument is provided
+  if [[ -z "$1" || ! "$1" == */* ]]; then
+    LOG_ERROR "Invalid format. Expected IP/PREFIX format, e.g. 192.168.1.1/24"
+    return 1
+  fi
+
+  local ip
+  local prefix
   local net_addr_arr=()
   local i
 
+  IFS='/' read -ra parts <<< "$1"
+  ip="${parts[0]}"
+  prefix="${parts[1]}"
   IFS='.' read -ra ip_octets <<< "$ip"
   
   local mask_bits=""
@@ -135,7 +144,7 @@ function calculate_network_address() {
     net_addr_arr+=($((ip_octet & mask_octet)))
   done
 
-  echo "${net_addr_arr[0]}.${net_addr_arr[1]}.${net_addr_arr[2]}.${net_addr_arr[3]}"
+  echo "${net_addr_arr[0]}.${net_addr_arr[1]}.${net_addr_arr[2]}.${net_addr_arr[3]}/$prefix"
 }
 
 function is_ip_in_same_subnet() {
