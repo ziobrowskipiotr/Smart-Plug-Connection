@@ -86,7 +86,6 @@ function get_connector_ip_and_mask() {
 
   if [[ "$count" != 0 ]]; then
     LOG_FATAL "Could not find an active local IPv4 address."
-    return 1
   fi
 
   if [[ "$count" != 1 ]]; then
@@ -116,8 +115,7 @@ function get_connector_ip_and_mask() {
 function calculate_network_address() {
   # Check if argument is provided
   if [[ -z "$1" || ! "$1" == */* ]]; then
-    LOG_ERROR "Invalid format. Expected IP/PREFIX format, e.g. 192.168.1.1/24"
-    return 1
+    LOG_FATAL "Invalid format. Expected IP/PREFIX format, e.g. 192.168.1.1/24"
   fi
 
   local ip
@@ -180,21 +178,18 @@ function validate_device_name() {
 
   # Check if the name empty?
   if [[ -z "$name" ]]; then
-    LOG_ERROR "ERROR: Device name cannot be empty."
-    return 1
+    LOG_FATAL "ERROR: Device name cannot be empty."
   fi
 
   # Check if the name contain only allowed characters (and no spaces)?
   if [[ ! "$name" =~ ^[a-zA-Z0-9_-]+$ ]]; then
     LOG_ERROR "Name contains invalid characters or spaces."
-    LOG_ERROR "Only letters, numbers, hyphens (-), and underscores (_) are allowed."
-    return 1
+    LOG_FATAL "Only letters, numbers, hyphens (-), and underscores (_) are allowed."
   fi
 
   # Check if the name is of an appropriate length (e.g., 3 to 30 characters)?
   if (( ${#name} < 3 || ${#name} > 30 )); then
-    LOG_ERROR "Name must be between 3 and 30 characters long."
-    return 1
+    LOG_FATAL "Name must be between 3 and 30 characters long."
   fi
 
   # If all checks passed
@@ -232,4 +227,69 @@ function check_tasmota_firmware() {
     # The device responded, but it doesn't look like Tasmota
     return 1 
   fi
+}
+
+# Function for processing arguments
+function process_arguments() {
+  local NAME=""
+  local IP=""
+
+  # If no arguments are provided, show usage and exit
+  if [[ $# -eq 0 ]]; then
+    show_usage
+    exit 1
+  fi
+
+  # Processing arguments in a loop. This logic now handles all flags.
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h|--help)
+        show_usage
+        exit 0 # Exit with code 0 (success) since the user requested help
+        ;;
+      --name)
+        # Check if a value was provided for the flag
+        if [ -n "$2" ]; then
+          NAME="$2"
+          shift 2 # Move past --name and its value
+        else
+          LOG_ERROR "Missing argument for --name option."
+        fi
+        ;;
+      --ip)
+        # Check if a value was provided for the flag
+        if [ -n "$2" ]; then
+          IP="$2"
+          shift 2 # Move past --ip and its value
+        else
+          LOG_ERROR "Missing argument for --ip option."
+        fi
+        ;;
+      -*)
+        # Handling unknown flags (starting with -)
+        LOG_ERROR "Unknown option: $1"
+        show_usage
+        exit 1
+        ;;
+      *)
+        # Handling positional arguments (if no flags were used)
+        # If NAME is not set yet, this is the first positional argument
+        if [ -z "$NAME" ]; then
+          NAME="$1"
+        elif [ -z "$IP" ]; then
+          IP="$1"
+        else
+          LOG_ERROR "Too many positional arguments provided."
+          show_usage
+          exit 1
+        fi
+        shift # Move to the next argument
+        ;;
+    esac
+  done
+
+  # Return the parsed values (NAME and IP) via global variables or other means as needed.
+  PARSED_NAME="$NAME"
+  PARSED_IP="$IP"
+  return 0
 }

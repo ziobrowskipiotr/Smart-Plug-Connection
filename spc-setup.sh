@@ -3,7 +3,6 @@
 # Script for setting up the Smart-Plug-Connection environment
 if [[ "$EUID" -ne 0 ]]; then
   LOG_FATAL "This command must be running with root privileges"
-  exit 1
 fi
 
 # Get the directory of the current script
@@ -21,7 +20,6 @@ sudo curl -fsSL https://tailscale.com/install.sh | sh
 # Check if the installation was successful
 if [[ $? -ne 0 ]]; then
     LOG_FATAL "Failed to install dependencies."
-    exit 1
 fi
 
 # Create .env file if it doesn't exist
@@ -32,7 +30,6 @@ fi
 
 if ! file_exists ".env"; then
     LOG_FATAL "Failed to create .env file."
-    exit 1
 fi
 
 LOG_INFO "To complete Tailscale setup:"
@@ -67,12 +64,10 @@ done
 connector_ip_and_mask=$(get_connector_ip_and_mask)
 if [[ $? -ne 0 || -z "$connector_ip_and_mask" ]]; then
     LOG_FATAL "Failed to get connector IP and mask."
-    exit 1
 fi
 network_address=$(calculate_network_address "$connector_ip_and_mask")
 if [[ $? -ne 0 || -z "$network_address" ]]; then
     LOG_FATAL "Failed to calculate network address."
-    exit 1
 fi
 sudo tailscale up --authkey="$(grep 'KEY=' .env | cut -d '=' -f2)" --accept-routes --advertise-tags=tag:SPC --advertise-routes="$network_address"
 
@@ -80,20 +75,17 @@ sudo tailscale up --authkey="$(grep 'KEY=' .env | cut -d '=' -f2)" --accept-rout
 sudo tailscale status
 if [[ $? -ne 0 ]]; then
     LOG_FATAL "Tailscale is not running correctly. Please check your Tailscale setup."
-    exit 1
 fi
 
 # Check if the database file already exists
 if (! file_exists "$SCHEMA_FILE"); then
     LOG_FATAL "Schema file '$SCHEMA_FILE' not found!"
-    exit 1
 fi
 
 # Initialize the database
 sqlite3 "$DB_FILE" < "$SCHEMA_FILE"
 if [ $? -ne 0 ]; then
     LOG_FATAL "Failed to initialize the database."
-    exit 1
 fi
 LOG_INFO "Database '$DB_FILE' initialized successfully."
 
@@ -104,7 +96,6 @@ fi
 # Check if the directory was created successfully
 if directory_exists ~/bin; then
     LOG_FATAL "Failed to create directory ~/bin"
-    exit 1
 fi
 
 # Create symbolic link to the scripts in ~/bin

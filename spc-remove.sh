@@ -27,48 +27,16 @@ Examples:
 EOF
 }
 
-# Parse args (both optional)
-NAME=""
-IP=""
+# If no arguments are provided, show usage and exit
+if [[ $# -eq 0 ]]; then
+  show_usage
+  exit 1
+fi
 
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    -h|--help)
-      show_usage
-      exit 0
-      ;;
-    --name)
-      if [ -n "$2" ]; then
-        NAME="$2"
-        shift 2
-      else
-        LOG_ERROR "Missing value for --name"
-        exit 1
-      fi
-      ;;
-    --ip)
-      if [ -n "$2" ]; then
-        IP="$2"
-        shift 2
-      else
-        LOG_ERROR "Missing value for --ip"
-        exit 1
-      fi
-      ;;
-    -*)
-      LOG_ERROR "Unknown option: $1"
-      show_usage
-      exit 1
-      ;;
-    *)
-      # treat lone positional as name if name not set
-      if [ -z "$NAME" ]; then
-        NAME="$1"
-      fi
-      shift
-      ;;
-  esac
-done
+# Parse arguments
+process_arguments "$@"
+NAME="$PARSED_NAME"
+IP="$PARSED_IP"
 
 # Determine which identifier to use:
 # Priority: NAME (if given) > IP (if given)
@@ -77,7 +45,6 @@ if [[ -n "$NAME" ]]; then
   DEVICE_ID=$(sqlite3 "$DB_FILE" "SELECT id FROM devices WHERE name = ?;" "$NAME")
   if [[ -z "$DEVICE_ID" ]]; then
     LOG_FATAL "Device with name \"$NAME\" not found in database."
-    exit 1
   fi
   DEVICE_NAME="$NAME"
 else
@@ -85,7 +52,6 @@ else
   DEVICE_ID=$(sqlite3 "$DB_FILE" "SELECT id FROM devices WHERE ipv4 = ?;" "$IP")
   if [[ -z "$DEVICE_ID" ]]; then
     LOG_FATAL "Device with IP \"$IP\" not found in database."
-    exit 1
   fi
   # get friendly name if any
   DEVICE_NAME=$(sqlite3 "$DB_FILE" "SELECT name FROM devices WHERE id = ?;" "$DEVICE_ID")
@@ -102,7 +68,6 @@ fi
 sqlite3 "$DB_FILE" "DELETE FROM devices WHERE id = ?;" "$DEVICE_ID"
 if [[ $? -ne 0 ]]; then
   LOG_FATAL "Failed to remove device \"$DEVICE_NAME\" (id=$DEVICE_ID)."
-  exit 1
 fi
 
 LOG_INFO "Device \"$DEVICE_NAME\" (id=$DEVICE_ID) removed successfully."
