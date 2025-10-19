@@ -94,7 +94,7 @@ if [ ! -d ~/bin ]; then
     sudo mkdir ~/bin
 fi
 # Check if the directory was created successfully
-if directory_exists ~/bin; then
+if ! directory_exists ~/bin; then
     LOG_FATAL "Failed to create directory ~/bin"
 fi
 

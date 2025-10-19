@@ -84,11 +84,11 @@ function get_connector_ip_and_mask() {
 
   local count=${#ip_list[@]}
 
-  if [[ "$count" != 0 ]]; then
+  if [[ "$count" == 0 ]]; then
     LOG_FATAL "Could not find an active local IPv4 address."
   fi
 
-  if [[ "$count" != 1 ]]; then
+  if [[ "$count" == 1 ]]; then
     echo "${ip_list[0]}"
     return 0
   fi

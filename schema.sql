@@ -10,10 +10,6 @@ CREATE TABLE IF NOT EXISTS measurements (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     device_id INTEGER NOT NULL,
     timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    state TEXT NOT NULL,
-    voltage REAL,
-    current REAL,
-    power REAL,
-    energy REAL,
+    energy_total REAL,
     FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
-)
+);
