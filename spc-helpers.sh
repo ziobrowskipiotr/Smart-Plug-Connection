@@ -293,3 +293,162 @@ function process_arguments() {
   PARSED_IP="$IP"
   return 0
 }
+
+function find_and_update_ip_by_mac() {
+  local device_name="$1"
+  local mac_address
+  local scan_result
+  local found_ip
+
+  # Get the MAC address from the database for the given name
+  mac_address=$(sqlite3 "$DB_FILE" "SELECT mac FROM devices WHERE name = ?;" "$device_name")
+
+  if [[ -z "$mac_address" ]]; then
+    LOG_ERROR "Could not find MAC address for device \"$device_name\" in the database."
+    echo "" # Return empty string on failure
+    return 1
+  fi
+
+  LOG_INFO "Scanning the network for MAC address: $mac_address..."
+
+  # Scan the network with arp-scan and filter for the MAC address
+  # arp-scan requires root privileges.
+  scan_result=$(sudo arp-scan -l | grep -i "$mac_address")
+
+  if [[ -z "$scan_result" ]]; then
+    LOG_WARN "Device with MAC $mac_address not found on the local network. It may be offline."
+    echo "" # Return empty string on failure
+    return 1
+  fi
+
+  # Extract the IP address from the scan result (it's the first column)
+  found_ip=$(echo "$scan_result" | awk '{print $1}')
+
+  if [[ -z "$found_ip" ]]; then
+    LOG_ERROR "Could not parse IP address from arp-scan result for MAC $mac_address."
+    echo "" # Return empty string on failure
+    return 1
+  fi
+
+  # Update the IP address in the database
+  LOG_INFO "Device found at new IP: $found_ip. Updating database..."
+  sqlite3 "$DB_FILE" "UPDATE devices SET ipv4 = ? WHERE name = ?;" "$found_ip" "$device_name"
+  
+  if [[ $? -ne 0 ]]; then
+    LOG_ERROR "Failed to update IP address in the database for device \"$device_name\"."
+    echo "" # Return empty string on failure
+    return 1
+  fi
+
+  # Return the newly found IP address
+  echo "$found_ip"
+  return 0
+}
+
+function resolve_device_ip() {
+  local device_name="$1"
+  local device_ip="$2"
+  local db_ip
+  local new_ip
+
+  # Validation
+  if [[ -z "$device_name" && -z "$device_ip" ]]; then
+    LOG_ERROR "You must provide a device name (--name) or an IP address (--ip)."
+    show_usage
+    exit 1
+  fi
+
+  # Case: Both name and IP are provided (highest priority for validation)
+  if [[ -n "$device_name" && -n "$device_ip" ]]; then
+    db_ip=$(sqlite3 "$DB_FILE" "SELECT ipv4 FROM devices WHERE name = ?;" "$device_name")
+    
+    if [[ -z "$db_ip" ]]; then
+      LOG_FATAL "Device with name \"$device_name\" not found in the database."
+    fi
+    
+    # If the IPs match, we are good to go.
+    if [[ "$db_ip" == "$device_ip" ]]; then
+      echo "$device_ip"
+      return 0
+    else
+      # Search the network for the correct IP using MAC address
+      LOG_WARN "Provided IP ($device_ip) does not match the one in the database ($db_ip)."
+      LOG_INFO "Attempting to find the correct IP on the network via MAC scan..."
+      
+      new_ip=$(find_and_update_ip_by_mac "$device_name")
+      
+      if [[ -n "$new_ip" ]]; then
+        LOG_INFO "Successfully found and updated IP to $new_ip. Proceeding with command."
+        echo "$new_ip"
+        return 0
+      else
+        LOG_FATAL "Could not find the device on the network. Please check if it's powered on."
+      fi
+    fi
+  fi
+
+  # Case: Only name is provided
+  if [[ -n "$device_name" ]]; then
+    db_ip=$(sqlite3 "$DB_FILE" "SELECT ipv4 FROM devices WHERE name = ?;" "$device_name")
+    
+    if [[ -z "$db_ip" ]]; then
+      LOG_FATAL "No device with name \"$device_name\" found in the database."
+    fi
+    echo "$db_ip"
+    return 0
+  fi
+
+  # Case: Only IP is provided
+  if [[ -n "$device_ip" ]]; then
+    echo "$device_ip"
+    return 0
+  fi
+}
+
+function get_active_power() {
+  local ip_address="$1"
+  local response
+  
+  # Command 'Status 8' returns sensor data, including power consumption
+  response=$(curl -s --connect-timeout 3 "http://$ip_address/cm?cmnd=Status%208")
+  
+  # Use jq to parse the JSON and extract the 'Power' value.
+  # The '-r' flag gives the raw value without quotes.
+  echo "$response" | jq -r '.StatusSNS.ENERGY.Power'
+}
+
+function get_voltage() {
+  local ip_address="$1"
+  local response
+  
+  response=$(curl -s --connect-timeout 3 "http://$ip_address/cm?cmnd=Status%208")
+  
+  echo "$response" | jq -r '.StatusSNS.ENERGY.Voltage'
+}
+
+function get_current() {
+  local ip_address="$1"
+  local response
+  
+  response=$(curl -s --connect-timeout 3 "http://$ip_address/cm?cmnd=Status%208")
+  
+  echo "$response" | jq -r '.StatusSNS.ENERGY.Current'
+}
+
+function get_energy_today() {
+  local ip_address="$1"
+  local response
+  
+  response=$(curl -s --connect-timeout 3 "http://$ip_address/cm?cmnd=Status%208")
+  
+  echo "$response" | jq -r '.StatusSNS.ENERGY.Today'
+}
+
+function get_energy_yesterday() {
+  local ip_address="$1"
+  local response
+  
+  response=$(curl -s --connect-timeout 3 "http://$ip_address/cm?cmnd=Status%208")
+  
+  echo "$response" | jq -r '.StatusSNS.ENERGY.Yesterday'
+}

@@ -1,7 +1,6 @@
 #!/bin/bash
 # spc-remove.sh
 # Remove smartplug from DB. Supports optional --name and/or --ip.
-# If no flags are provided, the script will show usage and exit.
 
 # Get the directory of the current script
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
@@ -18,7 +17,8 @@ Options:
 
 Notes:
   - You must provide at least --name or --ip.
-  - If both are provided, they must refer to the same device in the database.
+  - If both are provided, the script will validate that they match.
+    If they don't, it will try to find the device on the network.
 
 Examples:
     $0 --name my_plug
@@ -38,58 +38,32 @@ process_arguments "$@"
 NAME="$PARSED_NAME"
 IP="$PARSED_IP"
 
-# Ensure at least one identifier is provided
-if [[ -z "$NAME" && -z "$IP" ]]; then
-  LOG_ERROR "You must provide a device name (--name) or an IP address (--ip)."
-  show_usage
-  exit 1
+# Resolve the target IP using the helper function. It handles all validation and auto-correction.
+# NOTE: This command might need to be run with sudo for the arp-scan to work.
+TARGET_IP=$(resolve_device_ip "$NAME" "$IP")
+if [[ -z "$TARGET_IP" ]]; then
+    LOG_FATAL "Could not resolve the specified device. Exiting."
 fi
 
-# If both name and IP are provided, verify they match in the database
-if [[ -n "$NAME" && -n "$IP" ]]; then
-  DB_IP=$(sqlite3 "$DB_FILE" "SELECT ipv4 FROM devices WHERE name = ?;" "$NAME")
-  
-  # Check if the name exists at all
-  if [[ -z "$DB_IP" ]]; then
-    LOG_FATAL "Device with name \"$NAME\" not found in the database."
-  fi
+# Now that we have the definitive IP, get the device details for removal
+DEVICE_INFO=$(sqlite3 -separator '|' "$DB_FILE" "SELECT id, name FROM devices WHERE ipv4 = ?;" "$TARGET_IP")
 
-  # Check if the found IP matches the provided IP
-  if [[ "$DB_IP" != "$IP" ]]; then
-    LOG_FATAL "Mismatch: Device \"$NAME\" exists but has IP \"$DB_IP\", not the provided IP \"$IP\"."
-  fi
-fi
-
-
-# Determine which identifier to use for the final lookup
-if [[ -n "$NAME" ]]; then
-  # Find device by name. We use a separator '|' to safely parse the output.
-  DEVICE_INFO=$(sqlite3 -separator '|' "$DB_FILE" "SELECT id, name FROM devices WHERE name = ?;" "$NAME")
-  if [[ -z "$DEVICE_INFO" ]]; then
-    # This case is redundant if both name and ip were provided, but necessary if only name was.
-    LOG_FATAL "Device with name \"$NAME\" not found in the database."
-  fi
-elif [[ -n "$IP" ]]; then
-  # Find device by IP
-  DEVICE_INFO=$(sqlite3 -separator '|' "$DB_FILE" "SELECT id, name FROM devices WHERE ipv4 = ?;" "$IP")
-  if [[ -z "$DEVICE_INFO" ]]; then
-    LOG_FATAL "Device with IP \"$IP\" not found in the database."
-  fi
+if [[ -z "$DEVICE_INFO" ]]; then
+    LOG_FATAL "Could not find device details in database for IP \"$TARGET_IP\". The database might be out of sync."
 fi
 
 # Extract ID and Name from the query result
 DEVICE_ID=$(echo "$DEVICE_INFO" | cut -d'|' -f1)
 DEVICE_NAME=$(echo "$DEVICE_INFO" | cut -d'|' -f2)
 
-
 # Confirm removal
-read -p "Are you sure you want to remove device \"$DEVICE_NAME\" (id=$DEVICE_ID)? (y/N): " CONFIRM
+read -p "Are you sure you want to remove device \"$DEVICE_NAME\" (id=$DEVICE_ID) from IP $TARGET_IP? (y/N): " CONFIRM
 if [[ ! "$CONFIRM" =~ ^[yY](es)?$ ]]; then
   LOG_INFO "Operation cancelled."
   exit 0
 fi
 
-# Delete
+# Delete using the unique ID
 sqlite3 "$DB_FILE" "DELETE FROM devices WHERE id = ?;" "$DEVICE_ID"
 if [[ $? -ne 0 ]]; then
   LOG_FATAL "Failed to remove device \"$DEVICE_NAME\" (id=$DEVICE_ID)."
