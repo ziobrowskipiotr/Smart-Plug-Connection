@@ -26,7 +26,7 @@ fi
 
 # If the script is executed with sudo, remember the original user and home
 ORIG_USER=${SUDO_USER:-$USER}
-ORIG_HOME=$(eval echo ~${SUDO_USER:-$USER})
+ORIG_HOME=$(eval echo ~"${SUDO_USER:-$USER}")
 
 # Sudo command for privileged operations (empty when running as target user)
 if [ "$EUID" -eq 0 ]; then
@@ -62,14 +62,9 @@ if [[ $? -ne 0 ]]; then
     LOG_FATAL "Failed to install dependencies."
 fi
 
-
-# <<< TO JEST KLUCZOWA POPRAWKA >>>
-# Upewnij się, że usługa tailscaled jest włączona i uruchomiona, zanim jej użyjemy.
-# 'enable --now' robi dwie rzeczy: 1. startuje usługę teraz, 2. włącza jej start przy restarcie systemu.
+# Ensure the tailscaled service is enabled and running before we use it.
 LOG_INFO "Ensuring tailscaled service is running..."
 $SUDO_CMD systemctl enable --now tailscaled
-# <<< KONIEC POPRAWKI >>>
-
 
 # First, run interactive login to connect the device to an account
 LOG_INFO "Uruchamianie interaktywnego logowania do Tailscale..."
@@ -183,17 +178,23 @@ if [ $? -ne 0 ]; then
 fi
 LOG_DEBUG "Database '$DB_FILE' initialized successfully."
 
-# Create a directory for private scripts and programs if it doesn't exist
-if [ ! -d ~/bin ]; then
-    sudo mkdir ~/bin
-fi
-# Check if the directory was created successfully
-if ! directory_exists ~/bin; then
-    LOG_FATAL "Failed to create directory ~/bin"
+# Define the target directory in the original user's home
+USER_BIN_DIR="$ORIG_HOME/bin"
+
+LOG_DEBUG "Ensuring '$USER_BIN_DIR' exists for user '$ORIG_USER'..."
+# Use run_as_user to create the directory if it doesn't exist
+run_as_user "mkdir -p '$USER_BIN_DIR'"
+
+# Check if the directory was created successfully (also run as user)
+if ! run_as_user "test -d '$USER_BIN_DIR'"; then
+    LOG_FATAL "Failed to create directory $USER_BIN_DIR for user $ORIG_USER"
 fi
 
-# Create symbolic link to the scripts in ~/bin
-ln -s ~/Smart-Plug-Connection/spc.sh ~/bin/spc
+# Create or update symbolic link in the user's bin directory
+# Use -sf to force overwrite if it exists, preventing errors on re-runs
+LOG_DEBUG "Creating symbolic link from '$PROJECT_ROOT/spc.sh' to '$USER_BIN_DIR/spc'"
+run_as_user "ln -sf '$PROJECT_ROOT/spc.sh' '$USER_BIN_DIR/spc'"
+
 
 LOG_DEBUG "Installation complete."
 exit 0
