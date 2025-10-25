@@ -73,7 +73,6 @@ fi
 # First, run interactive login to connect the device to an account
 LOG_DEBUG "Starting interactive login to Tailscale..."
 LOG_DEBUG "Copy the link that appears and open it in your browser to log in the device."
-$SUDO_CMD tailscale up
 $SUDO_CMD tailscale login
 
 # Check if login was successful
