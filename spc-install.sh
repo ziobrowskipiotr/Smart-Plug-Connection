@@ -6,7 +6,7 @@ set -euo pipefail
 
 REPO_URL="https://github.com/ziobrowskipiotr/Smart-Plug-Connection.git"
 DEST_DIR="$HOME/Smart-Plug-Connection"
-SPC_DIR="$DEST_DIR/spc"
+SPC_DIR="$DEST_DIR"
 
 err() { echo "ERROR: $*" >&2; }
 info() { echo "INFO: $*"; }
