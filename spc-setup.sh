@@ -70,16 +70,6 @@ if [[ $? -ne 0 ]]; then
     LOG_FATAL "Failed to install dependencies."
 fi
 
-$SUDO_CMD tailscale up
-$SUDO_CMD tailscale login
-
-# Check if login was successful
-if [[ $? -ne 0 ]]; then
-    LOG_FATAL "Login to Tailscale failed. Please try running the script again."
-fi
-LOG_DEBUG "Device was successfully logged into your Tailscale account."
-LOG_DEBUG "Now, to complete the setup, you will need an authorization key (auth key)."
-
 # Create .env file if it doesn't exist (store in PROJECT_ROOT)
 ENV_FILE="$PROJECT_ROOT/.env"
 if ! file_exists "$ENV_FILE"; then
@@ -171,8 +161,8 @@ if [[ $? -ne 0 ]]; then
 fi
 
 # Define schema/database paths (they were used below but not defined)
-SCHEMA_FILE="$PROJECT_ROOT/schema.sql"
-DB_FILE="$PROJECT_ROOT/spc.db"
+SCHEMA_FILE="$SCRIPT_DIR/schema.sql"
+DB_FILE="$SCRIPT_DIR/spc.db"
 
 # Check if the database schema file exists
 if (! file_exists "$SCHEMA_FILE"); then
