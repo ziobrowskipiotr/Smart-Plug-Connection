@@ -78,7 +78,7 @@ TARGET="$IP"
 
 # Send the Power ON command
 if curl -s "http://$TARGET/cm?cmnd=Power%20ON" > /dev/null; then
-  LOG_INFO "Sent Power ON to $TARGET"
+  LOG_DEBUG "Sent Power ON to $TARGET"
 else
   LOG_FATAL "Failed to send Power ON to $TARGET"
   exit 1

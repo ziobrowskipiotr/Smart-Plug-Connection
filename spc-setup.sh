@@ -32,37 +32,37 @@ if ! file_exists ".env"; then
     LOG_FATAL "Failed to create .env file."
 fi
 
-LOG_INFO "To complete Tailscale setup:"
-LOG_INFO "  1. You need to visit https://login.tailscale.com/admin/acls/visual/tags:"
-LOG_INFO "    - click 'Create tag' button"
-LOG_INFO "    - enter 'SPC' as 'Tag name'"
-LOG_INFO "    - enter 'autogroup:admin' as 'Tag owner'"
-LOG_INFO "    - Add the note below to 'Tag notes' if you want:"
-LOG_INFO "      * Tag for unattended servers, disables key expiration or for devices that need to be constantly online."
-LOG_INFO "    - click 'Save tag' button"
-LOG_INFO "  2. You need to generate an auth key from https://login.tailscale.com/admin/settings/authkeys"
-LOG_INFO "    - click 'Generate auth key' button"
-LOG_INFO "    - check 'Reusable' and enter (e.g.) 90 at 'Expires' options"
-LOG_INFO "    - set Ephemeral unchecked"
-LOG_INFO "    - Check 'Tags' and add your created tag 'SPC' to 'Tags' by choosing from the dropdown menu 'Add tag'"
-LOG_INFO "    - click 'Generate auth key' button"
-LOG_INFO "    - You will see this key only once... make sure you copy it now!"
-LOG_INFO "    - if you lose it, you will need to generate a new one and revoke the old one"
-LOG_INFO "    - copy the generated key (starts with 'tskey-...')"
-LOG_INFO "  3. Paste the key into the .env file in the ~/bin/Smart-Plug-Connection directory"
+LOG_DEBUG "To complete Tailscale setup:"
+LOG_DEBUG "  1. You need to visit https://login.tailscale.com/admin/acls/visual/tags:"
+LOG_DEBUG "    - click 'Create tag' button"
+LOG_DEBUG "    - enter 'SPC' as 'Tag name'"
+LOG_DEBUG "    - enter 'autogroup:admin' as 'Tag owner'"
+LOG_DEBUG "    - Add the note below to 'Tag notes' if you want:"
+LOG_DEBUG "      * Tag for unattended servers, disables key expiration or for devices that need to be constantly online."
+LOG_DEBUG "    - click 'Save tag' button"
+LOG_DEBUG "  2. You need to generate an auth key from https://login.tailscale.com/admin/settings/authkeys"
+LOG_DEBUG "    - click 'Generate auth key' button"
+LOG_DEBUG "    - check 'Reusable' and enter (e.g.) 90 at 'Expires' options"
+LOG_DEBUG "    - set Ephemeral unchecked"
+LOG_DEBUG "    - Check 'Tags' and add your created tag 'SPC' to 'Tags' by choosing from the dropdown menu 'Add tag'"
+LOG_DEBUG "    - click 'Generate auth key' button"
+LOG_DEBUG "    - You will see this key only once... make sure you copy it now!"
+LOG_DEBUG "    - if you lose it, you will need to generate a new one and revoke the old one"
+LOG_DEBUG "    - copy the generated key (starts with 'tskey-...')"
+LOG_DEBUG "  3. Paste the key into the .env file in the ~/bin/Smart-Plug-Connection directory"
 # Wait for user confirmation (only if running interactively)
 if [ -t 0 ] && [ -t 1 ]; then
     while true; do
         read -r -p "Have you completed the steps above? (y/n): " answer
         case "$answer" in
             [Yy]* ) break;;
-            [Nn]* ) LOG_INFO "Please complete the steps above and then run this script again."; exit 0;;
-            * ) LOG_INFO "Please answer yes or no.";;
+            [Nn]* ) LOG_DEBUG "Please complete the steps above and then run this script again."; exit 0;;
+            * ) LOG_DEBUG "Please answer yes or no.";;
         esac
     done
 else
-    # Non-interactive shell (e.g. curl | bash) — do not loop endlessly
-    LOG_INFO "Non-interactive shell detected — skipping interactive confirmation.">
+    # Non-interactive shell (e.g. curl | bash) - do not loop endlessly
+    LOG_INFO "Non-interactive shell detected - skipping interactive confirmation."
     LOG_INFO "When ready, run this script interactively to continue Tailscale setup:"
     echo "  sudo bash '$SCRIPT_DIR/spc-setup.sh'"
     exit 0
@@ -95,7 +95,7 @@ sqlite3 "$DB_FILE" < "$SCHEMA_FILE"
 if [ $? -ne 0 ]; then
     LOG_FATAL "Failed to initialize the database."
 fi
-LOG_INFO "Database '$DB_FILE' initialized successfully."
+LOG_DEBUG "Database '$DB_FILE' initialized successfully."
 
 # Create a directory for private scripts and programs if it doesn't exist
 if [ ! -d ~/bin ]; then
@@ -109,5 +109,5 @@ fi
 # Create symbolic link to the scripts in ~/bin
 ln -s ~/Smart-Plug-Connection/spc.sh ~/bin/spc
 
-LOG_INFO "Installation complete."
+LOG_DEBUG "Installation complete."
 exit 0

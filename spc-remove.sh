@@ -59,7 +59,7 @@ DEVICE_NAME=$(echo "$DEVICE_INFO" | cut -d'|' -f2)
 # Confirm removal
 read -p "Are you sure you want to remove device \"$DEVICE_NAME\" (id=$DEVICE_ID) from IP $TARGET_IP? (y/N): " CONFIRM
 if [[ ! "$CONFIRM" =~ ^[yY](es)?$ ]]; then
-  LOG_INFO "Operation cancelled."
+  LOG_DEBUG "Operation cancelled."
   exit 0
 fi
 
@@ -69,5 +69,5 @@ if [[ $? -ne 0 ]]; then
   LOG_FATAL "Failed to remove device \"$DEVICE_NAME\" (id=$DEVICE_ID)."
 fi
 
-LOG_INFO "Device \"$DEVICE_NAME\" (id=$DEVICE_ID) removed successfully."
+LOG_DEBUG "Device \"$DEVICE_NAME\" (id=$DEVICE_ID) removed successfully."
 exit 0

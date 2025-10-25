@@ -109,24 +109,24 @@ if [ "$STATE" != "ON" ] && [ "$STATE" != "OFF" ]; then
   LOG_FATAL "Connector is unable to get state of the device"
 fi
 
-echo "Smartplug with IP address \"$IP\" is available"
+LOG_DEBUG "Smartplug with IP address \"$IP\" is available"
 
 # Add device to the database or change its name and IP address
 if (check_MAC_in_db "$MAC_ADDRESS"); then
-    LOG_INFO "Device with MAC address $MAC_ADDRESS is already in the database"
-    LOG_INFO "Changing name and IP address of the device..."
+    LOG_DEBUG "Device with MAC address $MAC_ADDRESS is already in the database"
+    LOG_DEBUG "Changing name and IP address of the device..."
     sqlite3 "$DB_FILE" "UPDATE devices SET ipv4 = ?, name = ? WHERE mac = ?;" "$IP" "$NAME" "$MAC_ADDRESS"
     if [ $? -ne 0 ]; then
         LOG_FATAL "Failed to update the device in the database."
     fi
-    LOG_INFO "Device updated successfully."
+    LOG_DEBUG "Device updated successfully."
 else
-    LOG_INFO "Adding device to the database..."
+    LOG_DEBUG "Adding device to the database..."
     sqlite3 "$DB_FILE" "INSERT INTO devices (name, ipv4, mac) VALUES (?, ?, ?);" "$NAME" "$IP" "$MAC_ADDRESS"
     if [ $? -ne 0 ]; then
         LOG_FATAL "Failed to add the device to the database."
     fi
-    LOG_INFO "Device added successfully."
+    LOG_DEBUG "Device added successfully."
 fi
 
 exit 0

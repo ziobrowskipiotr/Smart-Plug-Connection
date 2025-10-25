@@ -112,13 +112,13 @@ CURRENT_DISPLAY_NAME=$(echo "$DEVICE_INFO" | cut -d'|' -f2)
 
 
 # --- Perform Rename ---
-LOG_INFO "Renaming device \"$CURRENT_DISPLAY_NAME\" (ID: $DEVICE_ID, IP: $TARGET_IP) to \"$NEW_NAME\"..."
+LOG_DEBUG "Renaming device \"$CURRENT_DISPLAY_NAME\" (ID: $DEVICE_ID, IP: $TARGET_IP) to \"$NEW_NAME\"..."
 
 sqlite3 "$DB_FILE" "UPDATE devices SET name = ? WHERE id = ?;" "$NEW_NAME" "$DEVICE_ID"
 
 # --- Confirmation ---
 if [[ $? -eq 0 ]]; then
-  LOG_INFO "Success! Device renamed to \"$NEW_NAME\"."
+  LOG_DEBUG "Success! Device renamed to \"$NEW_NAME\"."
   exit 0
 else
   LOG_FATAL "Failed to update the database."

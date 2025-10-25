@@ -3,6 +3,7 @@
 
 function LOG_DEBUG {
     logger -t "$LOG_TAG" -p "user.debug" "[DEBUG]: $1"
+    echo "[SPC::DEBUG]: $1" >&2
 }
 function LOG_INFO {
     logger -t "$LOG_TAG" -p "user.info" "[INFO]: $1"
