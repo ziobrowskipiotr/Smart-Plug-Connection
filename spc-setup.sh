@@ -1,21 +1,55 @@
 #!/bin/bash
 
 # Script for setting up the Smart-Plug-Connection environment
-if [[ "$EUID" -ne 0 ]]; then
-  LOG_FATAL "This command must be running with root privileges"
+# Smart behavior: don't require running the whole script as root.
+# Only privileged commands will use sudo. Files that belong to the user
+# will be created in the user's home (even if installer is run via sudo).
+
+# Get the directory of the current script and project root
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+PROJECT_ROOT=$(dirname "$SCRIPT_DIR")
+
+# Source helpers if available (they define LOG_* and utility functions)
+if [ -f "$SCRIPT_DIR/spc-helpers.sh" ]; then
+    # shellcheck source=/dev/null
+    source "$SCRIPT_DIR/spc-helpers.sh"
+else
+    # minimal fallbacks
+    LOG_FATAL() { echo "FATAL: $*" >&2; exit 1; }
+    LOG_ERROR() { echo "ERROR: $*" >&2; }
+    LOG_WARN() { echo "WARN: $*" >&2; }
+    LOG_INFO() { echo "INFO: $*"; }
+    LOG_DEBUG() { echo "DEBUG: $*"; }
+    file_exists() { [ -f "$1" ]; }
+    directory_exists() { [ -d "$1" ]; }
 fi
 
-# Get the directory of the current script
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+# If the script is executed with sudo, remember the original user and home
+ORIG_USER=${SUDO_USER:-$USER}
+ORIG_HOME=$(eval echo ~${SUDO_USER:-$USER})
 
-# Source the helpers script
-source "$SCRIPT_DIR/spc-helpers.sh"
+# Sudo command for privileged operations (empty when running as target user)
+if [ "$EUID" -eq 0 ]; then
+    SUDO_CMD="sudo"
+else
+    SUDO_CMD="sudo"
+fi
 
-# Update and install dependencies
-sudo apt update
-sudo apt upgrade -y
-sudo apt install -y git curl sqlite3 jq arp-scan
-sudo curl -fsSL https://tailscale.com/install.sh | sh
+# Helper to run a command as the original user (useful for creating files in user's home)
+run_as_user() {
+    if [ "$(id -u)" -eq 0 ] && [ "$ORIG_USER" != "root" ]; then
+        sudo -u "$ORIG_USER" -- bash -c "$*"
+    else
+        bash -c "$*"
+    fi
+}
+
+# Update and install dependencies (requires privileges)
+$SUDO_CMD apt update
+$SUDO_CMD apt upgrade -y
+$SUDO_CMD apt install -y git curl sqlite3 jq arp-scan
+# Install Tailscale (their installer needs privilege)
+curl -fsSL https://tailscale.com/install.sh | $SUDO_CMD sh
 
 # Check if the installation was successful
 if [[ $? -ne 0 ]]; then
