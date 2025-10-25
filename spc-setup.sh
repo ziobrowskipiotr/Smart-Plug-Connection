@@ -192,9 +192,8 @@ fi
 
 # Create or update symbolic link in the user's bin directory
 # Use -sf to force overwrite if it exists, preventing errors on re-runs
-LOG_DEBUG "Creating symbolic link from '$PROJECT_ROOT/spc.sh' to '$USER_BIN_DIR/spc'"
-run_as_user "ln -sf '$PROJECT_ROOT/spc.sh' '$USER_BIN_DIR/spc'"
-
+LOG_DEBUG "Creating symbolic link from '$SCRIPT_DIR/spc.sh' to '$USER_BIN_DIR/spc'"
+run_as_user "ln -sf '$SCRIPT_DIR/spc.sh' '$USER_BIN_DIR/spc'"
 
 LOG_DEBUG "Installation complete."
 exit 0
