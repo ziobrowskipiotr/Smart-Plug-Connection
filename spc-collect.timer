@@ -1,0 +1,7 @@
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Unit=spc-collect.service
+
+[Install]
+WantedBy=timers.target

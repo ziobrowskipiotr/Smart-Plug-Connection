@@ -221,5 +221,14 @@ fi
 LOG_DEBUG "Resetting Bash command cache (hash -r)"
 run_as_user "hash -r || true"
 
+# Install collector systemd unit
+$SUDO_CMD cp "$SCRIPT_DIR/spc-collect.service" /etc/systemd/system/
+$SUDO_CMD cp "$SCRIPT_DIR/spc-collect.timer" /etc/systemd/system/
+
+$SUDO_CMD systemctl daemon-reload
+$SUDO_CMD systemctl enable --now spc-collect.timer
+
+LOG_INFO "Measurement collector enabled (every 5 minutes)."
+
 LOG_DEBUG "Installation complete."
 exit 0

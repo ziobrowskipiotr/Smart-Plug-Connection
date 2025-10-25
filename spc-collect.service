@@ -1,0 +1,8 @@
+[Unit]
+Description=Smart Plug Collector
+
+[Service]
+Type=oneshot
+User=piotr
+WorkingDirectory=/home/piotr/Smart-Plug-Connection
+ExecStart=/home/piotr/.local/bin/spc-collect
