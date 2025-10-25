@@ -222,7 +222,9 @@ LOG_DEBUG "Resetting Bash command cache (hash -r)"
 run_as_user "hash -r || true"
 
 # Install collector systemd unit
+LOG_DEBUG "$SUDO_CMD cp $SCRIPT_DIR/spc-collect.service /etc/systemd/system/"
 $SUDO_CMD cp "$SCRIPT_DIR/spc-collect.service" /etc/systemd/system/
+LOG_DEBUG "$SUDO_CMD cp $SCRIPT_DIR/spc-collect.timer /etc/systemd/system/"
 $SUDO_CMD cp "$SCRIPT_DIR/spc-collect.timer" /etc/systemd/system/
 
 $SUDO_CMD systemctl daemon-reload
