@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # Script for setting up the Smart-Plug-Connection environment
 # Smart behavior: don't require running the whole script as root.
@@ -15,17 +15,9 @@ cd "$PROJECT_ROOT" || exit 1
 
 # Source helpers if available (they define LOG_* and utility functions)
 if [ -f "$SCRIPT_DIR/spc-helpers.sh" ]; then
-    # shellcheck source=/dev/null
     source "$SCRIPT_DIR/spc-helpers.sh"
 else
-    # minimal fallbacks
-    LOG_FATAL() { echo "FATAL: $*" >&2; exit 1; }
-    LOG_ERROR() { echo "ERROR: $*" >&2; }
-    LOG_WARN()  { echo "WARN:  $*"; }
-    LOG_INFO()  { echo "INFO:  $*"; }
-    LOG_DEBUG() { echo "DEBUG: $*"; }
-    file_exists() { [ -f "$1" ]; }
-    directory_exists() { [ -d "$1" ]; }
+    LOG_FATAL "Helpers script '$SCRIPT_DIR/spc-helpers.sh' not found!"
 fi
 
 # If the script is executed with sudo, remember the original user and home
@@ -48,10 +40,7 @@ run_as_user() {
     fi
 }
 
-# Optional behavior flags (can be set as environment variables):
-# INTERACTIVE=1  -> force interactive prompts (read from /dev/tty)
 # RESET_TAILSCALE=1 -> remove local tailscale state and logout before 'tailscale up'
-INTERACTIVE=${INTERACTIVE:-0}
 RESET_TAILSCALE=${RESET_TAILSCALE:-0}
 
 # Update and install dependencies (requires privileges)
@@ -59,7 +48,7 @@ $SUDO_CMD apt update
 $SUDO_CMD apt upgrade -y
 $SUDO_CMD apt install -y git curl sqlite3 jq arp-scan
 
-# If RESET_TAILSCALE is set, logout first to clear local state
+# Logout first to clear local state
 $SUDO_CMD tailscale logout
 
 # Install Tailscale (their installer needs privilege)
@@ -71,7 +60,7 @@ if [[ $? -ne 0 ]]; then
 fi
 
 # First, run interactive login to connect the device to an account
-LOG_DEBUG "Starting interactive login to Tailscale..."
+LOG_DEBUG "Starting login to Tailscale..."
 LOG_DEBUG "Copy the link that appears and open it in your browser to log in the device."
 $SUDO_CMD tailscale up
 
@@ -111,37 +100,24 @@ LOG_DEBUG "    - You will see this key only once... make sure you copy it now!"
 LOG_DEBUG "    - if you lose it, you will need to generate a new one and revoke the old one"
 LOG_DEBUG "    - copy the generated key (starts with 'tskey-...')"
 LOG_DEBUG "  3. Paste the key into the .env file in the ~/Smart-Plug-Connection directory"
-# Wait for user confirmation (only if running interactively or INTERACTIVE=1)
-if [ "$INTERACTIVE" -eq 1 ] || ( [ -t 0 ] && [ -t 1 ] ); then
-    # choose input source: if /dev/tty is readable use it (works when stdin is a pipe)
-    INPUT=/dev/tty
-    if [ ! -r "$INPUT" ]; then
-        INPUT=/dev/stdin
-    fi
 
-    while true; do
-        # read from chosen input so piping can still work with INTERACTIVE=1
-        read -r -p "Have you completed the steps above and pasted the key? (y/n): " answer <"$INPUT"
-        case "$answer" in
-            [Yy]* ) break;;
-            [Nn]* ) LOG_DEBUG "Please complete the steps above and then run this script again."; exit 0;;
-            * ) LOG_DEBUG "Please answer yes or no.";;
-        esac
-    done
-else
-    # Non-interactive shell (e.g. curl | bash) - do not loop endlessly
-    LOG_INFO "Non-interactive shell detected - skipping interactive confirmation."
-    LOG_INFO "When ready, run this script interactively to continue Tailscale setup:"
-    echo "  sudo bash '$SCRIPT_DIR/spc-setup.sh'"
-    exit 0
+INPUT=/dev/tty
+if [ ! -r "$INPUT" ]; then
+    INPUT=/dev/stdin
 fi
 
+while true; do
+    # read from chosen input
+    read -r -p "Have you completed the steps above and pasted the key? (y/n): " answer <"$INPUT"
+    case "$answer" in
+        [Yy]* ) break;;
+        [Nn]* ) LOG_DEBUG "Please complete the steps above and then run this script again."; exit 0;;
+        * ) LOG_DEBUG "Please answer yes or no.";;
+    esac
+done
 
-# Optionally reset local Tailscale state before logging in
-if [ "$RESET_TAILSCALE" -eq 1 ]; then
-    LOG_INFO "Resetting local Tailscale state (logout + remove state files)"
-    $SUDO_CMD systemctl start tailscaled
-fi
+# Start tailscale on systemctl to make sure it runs on boot
+$SUDO_CMD systemctl start tailscaled
 
 # Start Tailscale with the provided auth key and advertise the SPC tag
 connector_ip_and_mask=$(get_connector_ip_and_mask)
@@ -155,7 +131,7 @@ if [[ $? -ne 0 || -z "$network_address" ]]; then
     LOG_FATAL "Failed to calculate network address."
 fi
 
-# If an auth key exists in .env, use it; otherwise run interactive tailscale up
+# If an auth key exists in .env, use it
 AUTHKEY=$(grep -E '^KEY=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f2- || true)
 if [ -n "$AUTHKEY" ]; then
     LOG_INFO "Using auth key from .env to re-authenticate and apply tags/routes..."
@@ -172,7 +148,7 @@ if [[ $? -ne 0 ]]; then
     LOG_FATAL "Tailscale is not running correctly. Please check your Tailscale setup."
 fi
 
-# Define schema/database paths (they were used below but not defined)
+# Define schema/database paths
 SCHEMA_FILE="$SCRIPT_DIR/schema.sql"
 DB_FILE="$SCRIPT_DIR/spc.db"
 

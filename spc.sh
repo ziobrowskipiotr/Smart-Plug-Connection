@@ -17,9 +17,7 @@ show_usage() {
 		echo "  $cmd"
 	done
 	echo
-	echo "Example: $0 on --name myplug"
-	echo "To make 'spc' available system-wide, create a symlink to this file in your PATH, e.g.:"
-	echo "  ln -s $SCRIPT_DIR/spc.sh ~/.local/bin/spc"
+	echo "Example: spc on --name myplug"
 }
 
 if [[ $# -eq 0 ]]; then
