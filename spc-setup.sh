@@ -70,6 +70,18 @@ if [[ $? -ne 0 ]]; then
     LOG_FATAL "Failed to install dependencies."
 fi
 
+# First, run interactive login to connect the device to an account
+LOG_DEBUG "Starting interactive login to Tailscale..."
+LOG_DEBUG "Copy the link that appears and open it in your browser to log in the device."
+$SUDO_CMD tailscale up
+
+# Check if login was successful
+if [[ $? -ne 0 ]]; then
+    LOG_FATAL "Login to Tailscale failed. Please try running the script again."
+fi
+LOG_DEBUG "Device was successfully logged into your Tailscale account."
+LOG_DEBUG "Now, to complete the setup, you will need an authorization key (auth key)."
+
 # Create .env file if it doesn't exist (store in PROJECT_ROOT)
 ENV_FILE="$PROJECT_ROOT/.env"
 if ! file_exists "$ENV_FILE"; then
