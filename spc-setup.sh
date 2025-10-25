@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Script for setting up the Smart-Plug-Connection environment
 # Smart behavior: don't require running the whole script as root.
@@ -6,8 +6,12 @@
 # will be created in the user's home (even if installer is run via sudo).
 
 # Get the directory of the current script and project root
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-PROJECT_ROOT=$(dirname "$SCRIPT_DIR")
+# (realpath to follow symlinks reliably)
+SCRIPT_DIR="$( cd -- "$( dirname -- "$( realpath "${BASH_SOURCE[0]}" )" )" &> /dev/null && pwd )"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Ensure we run relative ops from project root (so .env/DB/schema are consistent)
+cd "$PROJECT_ROOT" || exit 1
 
 # Source helpers if available (they define LOG_* and utility functions)
 if [ -f "$SCRIPT_DIR/spc-helpers.sh" ]; then
@@ -17,8 +21,8 @@ else
     # minimal fallbacks
     LOG_FATAL() { echo "FATAL: $*" >&2; exit 1; }
     LOG_ERROR() { echo "ERROR: $*" >&2; }
-    LOG_WARN() { echo "WARN: $*" >&2; }
-    LOG_INFO() { echo "INFO: $*"; }
+    LOG_WARN()  { echo "WARN:  $*"; }
+    LOG_INFO()  { echo "INFO:  $*"; }
     LOG_DEBUG() { echo "DEBUG: $*"; }
     file_exists() { [ -f "$1" ]; }
     directory_exists() { [ -d "$1" ]; }
@@ -28,9 +32,9 @@ fi
 ORIG_USER=${SUDO_USER:-$USER}
 ORIG_HOME=$(eval echo ~"${SUDO_USER:-$USER}")
 
-# Sudo command for privileged operations (empty when running as target user)
+# Sudo command for privileged operations (empty when running as root)
 if [ "$EUID" -eq 0 ]; then
-    SUDO_CMD="sudo"
+    SUDO_CMD=""
 else
     SUDO_CMD="sudo"
 fi
@@ -67,24 +71,25 @@ LOG_INFO "Ensuring tailscaled service is running..."
 $SUDO_CMD systemctl enable --now tailscaled
 
 # First, run interactive login to connect the device to an account
-LOG_INFO "Uruchamianie interaktywnego logowania do Tailscale..."
-LOG_INFO "Skopiuj link, który się pojawi i otwórz go w przeglądarce, aby zalogować urządzenie."
+LOG_DEBUG "Starting interactive login to Tailscale..."
+LOG_DEBUG "Copy the link that appears and open it in your browser to log in the device."
 $SUDO_CMD tailscale up
 
 # Check if login was successful
 if [[ $? -ne 0 ]]; then
-    LOG_FATAL "Logowanie do Tailscale nie powiodło się. Spróbuj uruchomić skrypt ponownie."
+    LOG_FATAL "Login to Tailscale failed. Please try running the script again."
 fi
-LOG_INFO "Urządzenie zostało pomyślnie zalogowane do Twojego konta Tailscale."
-LOG_INFO "Teraz, aby zakończyć konfigurację, potrzebny będzie klucz autoryzacyjny (auth key)."
+LOG_DEBUG "Device was successfully logged into your Tailscale account."
+LOG_DEBUG "Now, to complete the setup, you will need an authorization key (auth key)."
 
-# Create .env file if it doesn't exist
-if ! file_exists ".env"; then
+# Create .env file if it doesn't exist (store in PROJECT_ROOT)
+ENV_FILE="$PROJECT_ROOT/.env"
+if ! file_exists "$ENV_FILE"; then
     LOG_DEBUG "Creating .env file..."
-    echo "KEY=EXAMPLE_KEY" > .env
+    echo "KEY=EXAMPLE_KEY" > "$ENV_FILE"
 fi
 
-if ! file_exists ".env"; then
+if ! file_exists "$ENV_FILE"; then
     LOG_FATAL "Failed to create .env file."
 fi
 
@@ -119,8 +124,8 @@ if [ "$INTERACTIVE" -eq 1 ] || ( [ -t 0 ] && [ -t 1 ] ); then
         read -r -p "Have you completed the steps above and pasted the key? (y/n): " answer <"$INPUT"
         case "$answer" in
             [Yy]* ) break;;
-            [Nn]* ) LOG_INFO "Please complete the steps above and then run this script again."; exit 0;;
-            * ) LOG_INFO "Please answer yes or no.";;
+            [Nn]* ) LOG_DEBUG "Please complete the steps above and then run this script again."; exit 0;;
+            * ) LOG_DEBUG "Please answer yes or no.";;
         esac
     done
 else
@@ -152,7 +157,7 @@ if [[ $? -ne 0 || -z "$network_address" ]]; then
 fi
 
 # If an auth key exists in .env, use it; otherwise run interactive tailscale up
-AUTHKEY=$(grep -E '^KEY=' .env 2>/dev/null | cut -d '=' -f2- || true)
+AUTHKEY=$(grep -E '^KEY=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f2- || true)
 if [ -n "$AUTHKEY" ]; then
     LOG_INFO "Using auth key from .env to re-authenticate and apply tags/routes..."
     $SUDO_CMD tailscale up --authkey="$AUTHKEY" --accept-routes --advertise-tags=tag:SPC --advertise-routes="$network_address"
@@ -161,12 +166,16 @@ else
 fi
 
 # Verify Tailscale status
-sudo tailscale status
+$SUDO_CMD tailscale status
 if [[ $? -ne 0 ]]; then
     LOG_FATAL "Tailscale is not running correctly. Please check your Tailscale setup."
 fi
 
-# Check if the database file already exists
+# Define schema/database paths (they were used below but not defined)
+SCHEMA_FILE="$PROJECT_ROOT/schema.sql"
+DB_FILE="$PROJECT_ROOT/spc.db"
+
+# Check if the database schema file exists
 if (! file_exists "$SCHEMA_FILE"); then
     LOG_FATAL "Schema file '$SCHEMA_FILE' not found!"
 fi
@@ -194,6 +203,23 @@ fi
 # Use -sf to force overwrite if it exists, preventing errors on re-runs
 LOG_DEBUG "Creating symbolic link from '$SCRIPT_DIR/spc.sh' to '$USER_BIN_DIR/spc'"
 run_as_user "ln -sf '$SCRIPT_DIR/spc.sh' '$USER_BIN_DIR/spc'"
+
+# --- Added: also install into ~/.local/bin and ensure PATH (bez kasowania Twojej logiki powyżej)
+USER_LOCAL_BIN="$ORIG_HOME/.local/bin"
+LOG_DEBUG "Ensuring '$USER_LOCAL_BIN' exists for user '$ORIG_USER'..."
+run_as_user "mkdir -p '$USER_LOCAL_BIN'"
+LOG_DEBUG "Creating symbolic link from '$SCRIPT_DIR/spc.sh' to '$USER_LOCAL_BIN/spc'"
+run_as_user "ln -sf '$SCRIPT_DIR/spc.sh' '$USER_LOCAL_BIN/spc'"
+
+# Ensure PATH contains ~/.local/bin for the user
+if ! run_as_user "grep -q \"$USER_LOCAL_BIN\" \"$ORIG_HOME/.bashrc\" 2>/dev/null"; then
+    LOG_DEBUG "Adding '$USER_LOCAL_BIN' to PATH in $ORIG_HOME/.bashrc"
+    run_as_user "echo 'export PATH=\"$USER_LOCAL_BIN:\$PATH\"' >> \"$ORIG_HOME/.bashrc\""
+fi
+
+# Reset Bash's command hash cache to pick up new symlinks right away
+LOG_DEBUG "Resetting Bash command cache (hash -r)"
+run_as_user "hash -r || true"
 
 LOG_DEBUG "Installation complete."
 exit 0
