@@ -93,6 +93,9 @@ if ! file_exists "$ENV_FILE"; then
     LOG_FATAL "Failed to create .env file."
 fi
 
+$SUDO_CMD tailscale logout || true
+
+
 LOG_DEBUG "To complete Tailscale setup:"
 LOG_DEBUG "  1. You need to visit https://login.tailscale.com/admin/acls/visual/tags:"
 LOG_DEBUG "    - click 'Create tag' button"
@@ -140,19 +143,18 @@ fi
 # Optionally reset local Tailscale state before logging in
 if [ "$RESET_TAILSCALE" -eq 1 ]; then
     LOG_INFO "Resetting local Tailscale state (logout + remove state files)"
-    $SUDO_CMD tailscale logout || true
-    $SUDO_CMD systemctl stop tailscaled || true
-    $SUDO_CMD rm -rf /var/lib/tailscale/* || true
     $SUDO_CMD systemctl start tailscaled || true
 fi
 
 # Start Tailscale with the provided auth key and advertise the SPC tag
 connector_ip_and_mask=$(get_connector_ip_and_mask)
 if [[ $? -ne 0 || -z "$connector_ip_and_mask" ]]; then
+    LOG_DEBUG "Failed to get connector IP and mask."
     LOG_FATAL "Failed to get connector IP and mask."
 fi
 network_address=$(calculate_network_address "$connector_ip_and_mask")
 if [[ $? -ne 0 || -z "$network_address" ]]; then
+    LOG_DEBUG "Failed to calculate network address from $connector_ip_and_mask."
     LOG_FATAL "Failed to calculate network address."
 fi
 
@@ -162,12 +164,14 @@ if [ -n "$AUTHKEY" ]; then
     LOG_INFO "Using auth key from .env to re-authenticate and apply tags/routes..."
     $SUDO_CMD tailscale up --authkey="$AUTHKEY" --accept-routes --advertise-tags=tag:SPC --advertise-routes="$network_address"
 else
+    LOG_DEBUG "No auth key found in .env file."
     LOG_FATAL "No auth key found in .env file. Please generate one and add it."
 fi
 
 # Verify Tailscale status
 $SUDO_CMD tailscale status
 if [[ $? -ne 0 ]]; then
+    LOG_DEBUG "Tailscale is not running correctly."
     LOG_FATAL "Tailscale is not running correctly. Please check your Tailscale setup."
 fi
 
@@ -177,12 +181,14 @@ DB_FILE="$PROJECT_ROOT/spc.db"
 
 # Check if the database schema file exists
 if (! file_exists "$SCHEMA_FILE"); then
+    LOG_DEBUG "Schema file '$SCHEMA_FILE' not found!"
     LOG_FATAL "Schema file '$SCHEMA_FILE' not found!"
 fi
 
 # Initialize the database
 sqlite3 "$DB_FILE" < "$SCHEMA_FILE"
 if [ $? -ne 0 ]; then
+    LOG_DEBUG "Failed to initialize the database."
     LOG_FATAL "Failed to initialize the database."
 fi
 LOG_DEBUG "Database '$DB_FILE' initialized successfully."
@@ -196,6 +202,7 @@ run_as_user "mkdir -p '$USER_BIN_DIR'"
 
 # Check if the directory was created successfully (also run as user)
 if ! run_as_user "test -d '$USER_BIN_DIR'"; then
+    LOG_DEBUG "Failed to create directory $USER_BIN_DIR for user $ORIG_USER"
     LOG_FATAL "Failed to create directory $USER_BIN_DIR for user $ORIG_USER"
 fi
 
