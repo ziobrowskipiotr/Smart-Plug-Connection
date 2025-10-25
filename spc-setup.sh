@@ -60,7 +60,7 @@ $SUDO_CMD apt upgrade -y
 $SUDO_CMD apt install -y git curl sqlite3 jq arp-scan
 
 # If RESET_TAILSCALE is set, logout first to clear local state
-$SUDO_CMD tailscale logout || true
+$SUDO_CMD tailscale logout
 
 # Install Tailscale (their installer needs privilege)
 curl -fsSL https://tailscale.com/install.sh | $SUDO_CMD sh
@@ -142,7 +142,7 @@ fi
 # Optionally reset local Tailscale state before logging in
 if [ "$RESET_TAILSCALE" -eq 1 ]; then
     LOG_INFO "Resetting local Tailscale state (logout + remove state files)"
-    $SUDO_CMD systemctl start tailscaled || true
+    $SUDO_CMD systemctl start tailscaled
 fi
 
 # Start Tailscale with the provided auth key and advertise the SPC tag
