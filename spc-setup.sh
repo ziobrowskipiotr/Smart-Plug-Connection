@@ -44,6 +44,12 @@ run_as_user() {
     fi
 }
 
+# Optional behavior flags (can be set as environment variables):
+# INTERACTIVE=1  -> force interactive prompts (read from /dev/tty)
+# RESET_TAILSCALE=1 -> remove local tailscale state and logout before 'tailscale up'
+INTERACTIVE=${INTERACTIVE:-0}
+RESET_TAILSCALE=${RESET_TAILSCALE:-0}
+
 # Update and install dependencies (requires privileges)
 $SUDO_CMD apt update
 $SUDO_CMD apt upgrade -y
@@ -83,15 +89,22 @@ LOG_DEBUG "    - click 'Generate auth key' button"
 LOG_DEBUG "    - You will see this key only once... make sure you copy it now!"
 LOG_DEBUG "    - if you lose it, you will need to generate a new one and revoke the old one"
 LOG_DEBUG "    - copy the generated key (starts with 'tskey-...')"
-LOG_DEBUG "  3. Paste the key into the .env file in the ~/bin/Smart-Plug-Connection directory"
-# Wait for user confirmation (only if running interactively)
-if [ -t 0 ] && [ -t 1 ]; then
+LOG_DEBUG "  3. Paste the key into the .env file in the ~/Smart-Plug-Connection directory"
+# Wait for user confirmation (only if running interactively or INTERACTIVE=1)
+if [ "$INTERACTIVE" -eq 1 ] || ( [ -t 0 ] && [ -t 1 ] ); then
+    # choose input source: if /dev/tty is readable use it (works when stdin is a pipe)
+    INPUT=/dev/tty
+    if [ ! -r "$INPUT" ]; then
+        INPUT=/dev/stdin
+    fi
+
     while true; do
-        read -r -p "Have you completed the steps above? (y/n): " answer
+        # read from chosen input so piping can still work with INTERACTIVE=1
+        read -r -p "Have you completed the steps above? (y/n): " answer <"$INPUT"
         case "$answer" in
             [Yy]* ) break;;
-            [Nn]* ) LOG_DEBUG "Please complete the steps above and then run this script again."; exit 0;;
-            * ) LOG_DEBUG "Please answer yes or no.";;
+            [Nn]* ) LOG_INFO "Please complete the steps above and then run this script again."; exit 0;;
+            * ) LOG_INFO "Please answer yes or no.";;
         esac
     done
 else
@@ -100,6 +113,16 @@ else
     LOG_INFO "When ready, run this script interactively to continue Tailscale setup:"
     echo "  sudo bash '$SCRIPT_DIR/spc-setup.sh'"
     exit 0
+fi
+
+
+# Optionally reset local Tailscale state before logging in
+if [ "$RESET_TAILSCALE" -eq 1 ]; then
+    LOG_INFO "Resetting local Tailscale state (logout + remove state files)"
+    $SUDO_CMD tailscale logout || true
+    $SUDO_CMD systemctl stop tailscaled || true
+    $SUDO_CMD rm -rf /var/lib/tailscale/* || true
+    $SUDO_CMD systemctl start tailscaled || true
 fi
 
 # Start Tailscale with the provided auth key and advertise the SPC tag
@@ -111,7 +134,21 @@ network_address=$(calculate_network_address "$connector_ip_and_mask")
 if [[ $? -ne 0 || -z "$network_address" ]]; then
     LOG_FATAL "Failed to calculate network address."
 fi
-sudo tailscale up --authkey="$(grep 'KEY=' .env | cut -d '=' -f2)" --accept-routes --advertise-tags=tag:SPC --advertise-routes="$network_address"
+
+# If an auth key exists in .env, use it; otherwise run interactive tailscale up
+AUTHKEY=$(grep -E '^KEY=' .env 2>/dev/null | cut -d '=' -f2- || true)
+if [ -n "$AUTHKEY" ]; then
+    LOG_INFO "Using auth key from .env to connect Tailscale"
+    $SUDO_CMD tailscale up --authkey="$AUTHKEY" --accept-routes --advertise-tags=tag:SPC --advertise-routes="$network_address"
+else
+    LOG_INFO "No auth key found — running interactive 'tailscale up'"
+    # run interactive tailscale up; ensure tty input if INTERACTIVE forced
+    if [ "$INTERACTIVE" -eq 1 ] && [ -r /dev/tty ]; then
+        $SUDO_CMD tailscale up --accept-routes --advertise-tags=tag:SPC --advertise-routes="$network_address" < /dev/tty
+    else
+        $SUDO_CMD tailscale up --accept-routes --advertise-tags=tag:SPC --advertise-routes="$network_address"
+    fi
+fi
 
 # Verify Tailscale status
 sudo tailscale status
