@@ -6,7 +6,7 @@ set -euo pipefail
 
 REPO_URL="https://github.com/ziobrowskipiotr/Smart-Plug-Connection.git"
 DEST_DIR="$HOME/Smart-Plug-Connection"
-SPC_DIR="$DEST_DIR"
+SPC_DIR=""
 
 err() { echo "ERROR: $*" >&2; }
 info() { echo "INFO: $*"; }
@@ -32,34 +32,65 @@ else
     fi
 fi
 
-# Make sure spc directory exists
-if [ ! -d "$SPC_DIR" ]; then
-    err "Expected directory $SPC_DIR not found in repository"
-    exit 1
+# Locate dispatcher script (spc.sh) — repo may place it at root or inside 'spc/'
+if [ -f "$DEST_DIR/spc.sh" ]; then
+    SCRIPT_PATH="$DEST_DIR/spc.sh"
+    SPC_DIR="$DEST_DIR"
+elif [ -f "$DEST_DIR/spc/spc.sh" ]; then
+    SCRIPT_PATH="$DEST_DIR/spc/spc.sh"
+    SPC_DIR="$DEST_DIR/spc"
+else
+    # Try to find spc.sh anywhere one level deep
+    SCRIPT_PATH=$(find "$DEST_DIR" -maxdepth 2 -type f -name spc.sh | head -n 1 || true)
+    if [ -n "$SCRIPT_PATH" ]; then
+        SPC_DIR=$(dirname "$SCRIPT_PATH")
+    else
+        err "Could not find 'spc.sh' in the cloned repository (tried root and 'spc/' subdir)."
+        err "Repository layout may have changed. Please inspect $DEST_DIR manually."
+        exit 1
+    fi
 fi
 
-# Make scripts in spc/ readable and executable for the user
+# Make scripts readable and executable for the user
 info "Adjusting permissions for scripts in $SPC_DIR"
 chmod -R u+rwX "$SPC_DIR" || true
 
 # Create user-local bin and symlink dispatcher
 LOCAL_BIN="$HOME/.local/bin"
 mkdir -p "$LOCAL_BIN"
-ln -sf "$SPC_DIR/spc.sh" "$LOCAL_BIN/spc"
-chmod u+x "$SPC_DIR/spc.sh" || true
+ln -sf "$SCRIPT_PATH" "$LOCAL_BIN/spc"
+chmod u+x "$SCRIPT_PATH" || true
 
 info "Installed 'spc' -> $LOCAL_BIN/spc"
 info "Make sure $LOCAL_BIN is in your PATH, e.g. add to ~/.profile:"
 echo "  export PATH=\"$LOCAL_BIN:\$PATH\""
 
-# Optionally run setup script if present
-SETUP_SCRIPT="$DEST_DIR/spc/spc-setup.sh"
-if [ -f "$SETUP_SCRIPT" ]; then
-    info "Found setup script: $SETUP_SCRIPT"
-    info "Running setup script (no sudo)"
-    bash "$SETUP_SCRIPT" || err "Setup script exited with non-zero status"
+# Optionally run setup script if present (can be at root or in spc/)
+SETUP_SCRIPT=""
+if [ -f "$DEST_DIR/spc-setup.sh" ]; then
+    SETUP_SCRIPT="$DEST_DIR/spc-setup.sh"
+elif [ -f "$DEST_DIR/spc/spc-setup.sh" ]; then
+    SETUP_SCRIPT="$DEST_DIR/spc/spc-setup.sh"
 else
-    info "No setup script found at $SETUP_SCRIPT — skipping"
+    # try to find it
+    SETUP_SCRIPT=$(find "$DEST_DIR" -maxdepth 2 -type f -name spc-setup.sh | head -n 1 || true)
+fi
+
+if [ -n "$SETUP_SCRIPT" ] && [ -f "$SETUP_SCRIPT" ]; then
+    info "Found setup script: $SETUP_SCRIPT"
+    info "Running setup script (with sudo if necessary)"
+    # If running as root already, don't use sudo
+    if [ "$EUID" -eq 0 ]; then
+        bash "$SETUP_SCRIPT" || err "Setup script exited with non-zero status"
+    else
+        if command -v sudo >/dev/null 2>&1; then
+            sudo bash "$SETUP_SCRIPT" || err "Setup script exited with non-zero status"
+        else
+            err "sudo not found; cannot run setup script automatically. Run it manually: sudo bash $SETUP_SCRIPT"
+        fi
+    fi
+else
+    info "No setup script found — skipping"
 fi
 
 info "Installation complete"
