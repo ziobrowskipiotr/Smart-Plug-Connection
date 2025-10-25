@@ -62,7 +62,14 @@ if [[ $? -ne 0 ]]; then
     LOG_FATAL "Failed to install dependencies."
 fi
 
-# <<< TUTAJ ZACZYNAJĄ SIĘ ZMIANY >>>
+
+# <<< TO JEST KLUCZOWA POPRAWKA >>>
+# Upewnij się, że usługa tailscaled jest włączona i uruchomiona, zanim jej użyjemy.
+# 'enable --now' robi dwie rzeczy: 1. startuje usługę teraz, 2. włącza jej start przy restarcie systemu.
+LOG_INFO "Ensuring tailscaled service is running..."
+$SUDO_CMD systemctl enable --now tailscaled
+# <<< KONIEC POPRAWKI >>>
+
 
 # First, run interactive login to connect the device to an account
 LOG_INFO "Uruchamianie interaktywnego logowania do Tailscale..."
@@ -75,8 +82,6 @@ if [[ $? -ne 0 ]]; then
 fi
 LOG_INFO "Urządzenie zostało pomyślnie zalogowane do Twojego konta Tailscale."
 LOG_INFO "Teraz, aby zakończyć konfigurację, potrzebny będzie klucz autoryzacyjny (auth key)."
-
-# <<< TUTAJ KOŃCZĄ SIĘ ZMIANY >>>
 
 # Create .env file if it doesn't exist
 if ! file_exists ".env"; then
