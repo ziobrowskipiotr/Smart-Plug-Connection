@@ -50,15 +50,23 @@ LOG_INFO "    - You will see this key only once... make sure you copy it now!"
 LOG_INFO "    - if you lose it, you will need to generate a new one and revoke the old one"
 LOG_INFO "    - copy the generated key (starts with 'tskey-...')"
 LOG_INFO "  3. Paste the key into the .env file in the ~/bin/Smart-Plug-Connection directory"
-# Wait for user confirmation
-while true; do
-    read -p "Have you completed the steps above? (y/n): " answer
-    case $answer in
-        [Yy]* ) break;;
-        [Nn]* ) LOG_INFO "Please complete the steps above and then run this script again."; exit 0;;
-        * ) LOG_INFO "Please answer yes or no.";;
-    esac
-done
+# Wait for user confirmation (only if running interactively)
+if [ -t 0 ] && [ -t 1 ]; then
+    while true; do
+        read -r -p "Have you completed the steps above? (y/n): " answer
+        case "$answer" in
+            [Yy]* ) break;;
+            [Nn]* ) LOG_INFO "Please complete the steps above and then run this script again."; exit 0;;
+            * ) LOG_INFO "Please answer yes or no.";;
+        esac
+    done
+else
+    # Non-interactive shell (e.g. curl | bash) — do not loop endlessly
+    LOG_INFO "Non-interactive shell detected — skipping interactive confirmation.">
+    LOG_INFO "When ready, run this script interactively to continue Tailscale setup:"
+    echo "  sudo bash '$SCRIPT_DIR/spc-setup.sh'"
+    exit 0
+fi
 
 # Start Tailscale with the provided auth key and advertise the SPC tag
 connector_ip_and_mask=$(get_connector_ip_and_mask)

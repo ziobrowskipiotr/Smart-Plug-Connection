@@ -2,14 +2,14 @@
 # Script with logging functions
 
 function LOG_DEBUG {
-    echo "[SPC::DEBUG::$(date +'%Y-%m-%d %H:%M:%S')]: $1" >&2
+    echo "[SPC::DEBUG::$(date +'%Y-%m-%d %H:%M:%S')]: $1" >&
 }
 function LOG_INFO {
-    echo "[SPC::INFO::$(date +'%Y-%m-%d %H:%M:%S')]: $1" >&2
+    echo "[SPC::INFO::$(date +'%Y-%m-%d %H:%M:%S')]: $1" >&
 }
 
 function LOG_WARN {
-    echo "[SPC::WARN::$(date +'%Y-%m-%d %H:%M:%S')]: $1" >&2
+    echo "[SPC::WARN::$(date +'%Y-%m-%d %H:%M:%S')]: $1" >&
 }
 
 function LOG_ERROR {
