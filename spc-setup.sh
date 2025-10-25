@@ -62,6 +62,22 @@ if [[ $? -ne 0 ]]; then
     LOG_FATAL "Failed to install dependencies."
 fi
 
+# <<< TUTAJ ZACZYNAJĄ SIĘ ZMIANY >>>
+
+# First, run interactive login to connect the device to an account
+LOG_INFO "Uruchamianie interaktywnego logowania do Tailscale..."
+LOG_INFO "Skopiuj link, który się pojawi i otwórz go w przeglądarce, aby zalogować urządzenie."
+$SUDO_CMD tailscale up
+
+# Check if login was successful
+if [[ $? -ne 0 ]]; then
+    LOG_FATAL "Logowanie do Tailscale nie powiodło się. Spróbuj uruchomić skrypt ponownie."
+fi
+LOG_INFO "Urządzenie zostało pomyślnie zalogowane do Twojego konta Tailscale."
+LOG_INFO "Teraz, aby zakończyć konfigurację, potrzebny będzie klucz autoryzacyjny (auth key)."
+
+# <<< TUTAJ KOŃCZĄ SIĘ ZMIANY >>>
+
 # Create .env file if it doesn't exist
 if ! file_exists ".env"; then
     LOG_DEBUG "Creating .env file..."
@@ -100,7 +116,7 @@ if [ "$INTERACTIVE" -eq 1 ] || ( [ -t 0 ] && [ -t 1 ] ); then
 
     while true; do
         # read from chosen input so piping can still work with INTERACTIVE=1
-        read -r -p "Have you completed the steps above? (y/n): " answer <"$INPUT"
+        read -r -p "Have you completed the steps above and pasted the key? (y/n): " answer <"$INPUT"
         case "$answer" in
             [Yy]* ) break;;
             [Nn]* ) LOG_INFO "Please complete the steps above and then run this script again."; exit 0;;
@@ -138,16 +154,10 @@ fi
 # If an auth key exists in .env, use it; otherwise run interactive tailscale up
 AUTHKEY=$(grep -E '^KEY=' .env 2>/dev/null | cut -d '=' -f2- || true)
 if [ -n "$AUTHKEY" ]; then
-    LOG_INFO "Using auth key from .env to connect Tailscale"
+    LOG_INFO "Using auth key from .env to re-authenticate and apply tags/routes..."
     $SUDO_CMD tailscale up --authkey="$AUTHKEY" --accept-routes --advertise-tags=tag:SPC --advertise-routes="$network_address"
 else
-    LOG_INFO "No auth key found — running interactive 'tailscale up'"
-    # run interactive tailscale up; ensure tty input if INTERACTIVE forced
-    if [ "$INTERACTIVE" -eq 1 ] && [ -r /dev/tty ]; then
-        $SUDO_CMD tailscale up --accept-routes --advertise-tags=tag:SPC --advertise-routes="$network_address" < /dev/tty
-    else
-        $SUDO_CMD tailscale up --accept-routes --advertise-tags=tag:SPC --advertise-routes="$network_address"
-    fi
+    LOG_FATAL "No auth key found in .env file. Please generate one and add it."
 fi
 
 # Verify Tailscale status
