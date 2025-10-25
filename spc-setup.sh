@@ -58,6 +58,10 @@ RESET_TAILSCALE=${RESET_TAILSCALE:-0}
 $SUDO_CMD apt update
 $SUDO_CMD apt upgrade -y
 $SUDO_CMD apt install -y git curl sqlite3 jq arp-scan
+
+# If RESET_TAILSCALE is set, logout first to clear local state
+$SUDO_CMD tailscale logout || true
+
 # Install Tailscale (their installer needs privilege)
 curl -fsSL https://tailscale.com/install.sh | $SUDO_CMD sh
 
@@ -92,9 +96,6 @@ fi
 if ! file_exists "$ENV_FILE"; then
     LOG_FATAL "Failed to create .env file."
 fi
-
-$SUDO_CMD tailscale logout || true
-
 
 LOG_DEBUG "To complete Tailscale setup:"
 LOG_DEBUG "  1. You need to visit https://login.tailscale.com/admin/acls/visual/tags:"
