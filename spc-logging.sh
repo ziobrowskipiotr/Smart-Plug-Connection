@@ -2,21 +2,21 @@
 # Script with logging functions
 
 function LOG_DEBUG {
-    echo "[SPC::DEBUG::$(date +'%Y-%m-%d %H:%M:%S')]: $1" >&
+    logger -t "$LOG_TAG" -p "user.debug" "[DEBUG]: $1"
 }
 function LOG_INFO {
-    echo "[SPC::INFO::$(date +'%Y-%m-%d %H:%M:%S')]: $1" >&
+    logger -t "$LOG_TAG" -p "user.info" "[INFO]: $1"
 }
 
 function LOG_WARN {
-    echo "[SPC::WARN::$(date +'%Y-%m-%d %H:%M:%S')]: $1" >&
+    logger -t "$LOG_TAG" -p "user.warning" "[WARN]: $1"
 }
 
 function LOG_ERROR {
-    echo "[SPC::ERROR::$(date +'%Y-%m-%d %H:%M:%S')]: $1" >&2
+    logger -t "$LOG_TAG" -p "user.err" "[ERROR]: $1"
 }
 
 function LOG_FATAL {
-    echo "[SPC::FATAL::$(date +'%Y-%m-%d %H:%M:%S')]: $1" >&2
+    logger -t "$LOG_TAG" -p "user.crit" "[FATAL]: $1"
     exit 1
 }
