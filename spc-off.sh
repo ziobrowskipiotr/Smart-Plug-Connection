@@ -80,7 +80,6 @@ fi
 TARGET="$IP"
 
 # Send the Power OFF command
-LOG_DEBUG "Sending Power OFF command to $TARGET..."
 if curl -s "http://$TARGET/cm?cmnd=Power%20OFF" > /dev/null; then
   LOG_DEBUG "Command sent successfully to $TARGET"
 else
