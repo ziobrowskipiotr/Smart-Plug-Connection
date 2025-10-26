@@ -184,7 +184,7 @@ run_as_user "mkdir -p '$USER_LOCAL_BIN'"
 # WRAPPER INSTEAD OF SYMLINK
 WRAPPER="$USER_LOCAL_BIN/spc"
 LOG_DEBUG "Creating wrapper script at '$WRAPPER'"
-run_as_user "cat > '$WRAPPER' <<EOF
+run_as_user "cat > '$WRAPPER' <<'EOF'
 #!/usr/bin/env bash
 cd \"$SCRIPT_DIR\"
 exec ./spc.sh \"\$@\"
