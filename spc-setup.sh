@@ -10,9 +10,6 @@
 SCRIPT_DIR="$( cd -- "$( dirname -- "$( realpath "${BASH_SOURCE[0]}" )" )" &> /dev/null && pwd )"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# Ensure we run relative ops from project root (so .env/DB/schema are consistent)
-cd "$PROJECT_ROOT" || exit 1
-
 # Source helpers if available (they define LOG_* and utility functions)
 if [ -f "$SCRIPT_DIR/spc-helpers.sh" ]; then
     # shellcheck source=/dev/null
@@ -165,8 +162,8 @@ if [[ $? -ne 0 ]]; then
 fi
 
 # FIXED DB LOCATION
-SCHEMA_FILE="$PROJECT_ROOT/schema.sql"
-DB_FILE="$PROJECT_ROOT/spc.db"
+SCHEMA_FILE="$SCRIPT_DIR/schema.sql"
+DB_FILE="$SCRIPT_DIR/spc.db"
 
 if (! file_exists "$SCHEMA_FILE"); then
     LOG_DEBUG "Schema file '$SCHEMA_FILE' not found!"
