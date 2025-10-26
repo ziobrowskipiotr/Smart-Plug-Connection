@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Lightweight self-contained installer for Smart-Plug-Connection
 # This script is safe to run via: curl -sSfL <url> | bash
 
