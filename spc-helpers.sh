@@ -45,7 +45,7 @@ check_state(){
 # Function for checking if MAC address is already in the database
 check_MAC_in_db() {
   local mac_address="$1"
-  local result=$(sqlite3 "$DB_FILE" "SELECT mac FROM devices WHERE mac = '$mac_address';")
+  local result=$(sqlite3 "$DB_FILE" "SELECT mac FROM devices WHERE mac = ?;" "$mac_address")
 
   if [ -n "$result" ]; then
     return 0
@@ -159,11 +159,8 @@ function is_ip_in_same_subnet() {
   connector_ip="${parts[0]}"
   prefix="${parts[1]}"
 
-  # Calculate network addresss for connector
-  net_addr1=$(calculate_network_address "$connector_ip" "$prefix") 
-
-  # Calculate network addresss for smartplug
-  net_addr2=$(calculate_network_address "$smartplug_ip" "$prefix") 
+  net_addr1=$(calculate_network_address "$connector_ip/$prefix") 
+  net_addr2=$(calculate_network_address "$smartplug_ip/$prefix")
 
   # Compare results
   if [[ "$net_addr1" == "$net_addr2" ]]; then
