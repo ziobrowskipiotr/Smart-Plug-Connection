@@ -7,9 +7,11 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 # Source logging functions
 source "$SCRIPT_DIR/spc-logging.sh"
 
+PROJECT_ROOT="$HOME/Smart-Plug-Connection"
+
 # Variables for database file
-DB_FILE="$HOME/Smart-Plug-Connection/spc.db"
-SCHEMA_FILE="$HOME/Smart-Plug-Connection/schema.sql"
+DB_FILE="$PROJECT_ROOT/spc.db"
+SCHEMA_FILE="$PROJECT_ROOT/schema.sql"
 
 # Function for checking connectivity
 check_connection() {
