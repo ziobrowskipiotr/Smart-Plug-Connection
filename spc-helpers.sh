@@ -8,8 +8,8 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 source "$SCRIPT_DIR/spc-logging.sh"
 
 # Variables for database file
-DB_FILE="$SCRIPT_DIR/spc.db"
-SCHEMA_FILE="$SCRIPT_DIR/schema.sql"
+DB_FILE="$HOME/Smart-Plug-Connection/spc.db"
+SCHEMA_FILE="$HOME/Smart-Plug-Connection/schema.sql"
 
 # Function for checking connectivity
 check_connection() {
