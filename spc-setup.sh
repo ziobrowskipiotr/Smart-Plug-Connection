@@ -186,6 +186,8 @@ WRAPPER="$USER_LOCAL_BIN/spc"
 LOG_DEBUG "Creating wrapper script at '$WRAPPER'"
 run_as_user "cat > '$WRAPPER' <<'EOF'
 #!/usr/bin/env bash
+cd \"$HOME/Smart-Plug-Connection\"
+exec ./spc.sh \"\$@\"
 EOF"
 run_as_user "chmod +x '$WRAPPER'"
 
