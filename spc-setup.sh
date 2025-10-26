@@ -149,8 +149,8 @@ if [[ $? -ne 0 ]]; then
 fi
 
 # Define schema/database paths
-SCHEMA_FILE="$HOME/Smart-Plug-Connection/schema.sql"
-DB_FILE="$HOME/Smart-Plug-Connection/spc.db"
+SCHEMA_FILE="$SCRIPT_DIR/schema.sql"
+DB_FILE="$SCRIPT_DIR/spc.db"
 
 # Check if the database schema file exists
 if (! file_exists "$SCHEMA_FILE"); then
