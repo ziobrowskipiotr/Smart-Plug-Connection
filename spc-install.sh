@@ -58,7 +58,6 @@ chmod -R u+rwX "$SPC_DIR" || true
 # Create user-local bin and symlink dispatcher
 LOCAL_BIN="$HOME/.local/bin"
 mkdir -p "$LOCAL_BIN"
-ln -sf "$SCRIPT_PATH" "$LOCAL_BIN/spc"
 chmod u+x "$SCRIPT_PATH" || true
 
 info "Installed 'spc' -> $LOCAL_BIN/spc"
