@@ -184,11 +184,13 @@ run_as_user "mkdir -p '$USER_LOCAL_BIN'"
 # WRAPPER INSTEAD OF SYMLINK
 WRAPPER="$USER_LOCAL_BIN/spc"
 LOG_DEBUG "Creating wrapper script at '$WRAPPER'"
-run_as_user "cat > '$WRAPPER' <<EOF
+
+run_as_user "cat <<'EOF' > '$WRAPPER'
 #!/usr/bin/env bash
 cd \"$ORIG_HOME/Smart-Plug-Connection\"
 exec ./spc.sh \"\$@\"
 EOF"
+
 run_as_user "chmod +x '$WRAPPER'"
 
 LOG_DEBUG "$SUDO_CMD cp $SCRIPT_DIR/spc-collect.service /etc/systemd/system/"
