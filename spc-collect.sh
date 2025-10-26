@@ -34,7 +34,6 @@ sqlite3 "$DB_FILE" "SELECT name FROM devices;" | while read -r dev; do
         continue
     fi
 
-- this query is compatible with your sqlite3 version
     sqlite3 "$DB_FILE" \
       "INSERT INTO measurements(device_id, energy_total)
        VALUES((SELECT id FROM devices WHERE name = '$dev'), $energy);"
