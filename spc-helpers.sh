@@ -45,7 +45,7 @@ check_state(){
 # Function for checking if MAC address is already in the database
 check_MAC_in_db() {
   local mac_address="$1"
-  local result=$(sqlite3 "$DB_FILE" "SELECT mac FROM devices WHERE mac = ?;" "$mac_address")
+  local result=$(sqlite3 "$DB_FILE" "SELECT mac FROM devices WHERE mac = '$mac_address';")
 
   if [ -n "$result" ]; then
     return 0
@@ -215,9 +215,7 @@ function check_tasmota_firmware() {
     return 1 
   fi
 
-  # If curl succeeded, check if the response contains the Tasmota-specific key.
-  # "StatusFWR" is very specific to the Tasmota status JSON structure.
-  if echo "$response" | grep -q '"StatusFWR"'; then
+  if echo "$response" | grep -q '"Topic"'; then
     # Success, found Tasmota signature
     return 0 
   else
@@ -298,7 +296,7 @@ function find_and_update_ip_by_mac() {
   local found_ip
 
   # Get the MAC address from the database for the given name
-  mac_address=$(sqlite3 "$DB_FILE" "SELECT mac FROM devices WHERE name = ?;" "$device_name")
+  mac_address=$(sqlite3 "$DB_FILE" "SELECT mac FROM devices WHERE name = '$device_name';")
 
   if [[ -z "$mac_address" ]]; then
     LOG_ERROR "Could not find MAC address for device \"$device_name\" in the database."
@@ -329,7 +327,7 @@ function find_and_update_ip_by_mac() {
 
   # Update the IP address in the database
   LOG_INFO "Device found at new IP: $found_ip. Updating database..."
-  sqlite3 "$DB_FILE" "UPDATE devices SET ipv4 = ? WHERE name = ?;" "$found_ip" "$device_name"
+  sqlite3 "$DB_FILE" "UPDATE devices SET ipv4 = '$found_ip' WHERE name = '$device_name';"
   
   if [[ $? -ne 0 ]]; then
     LOG_ERROR "Failed to update IP address in the database for device \"$device_name\"."
@@ -357,7 +355,7 @@ function resolve_device_ip() {
 
   # Case: Both name and IP are provided (highest priority for validation)
   if [[ -n "$device_name" && -n "$device_ip" ]]; then
-    db_ip=$(sqlite3 "$DB_FILE" "SELECT ipv4 FROM devices WHERE name = ?;" "$device_name")
+    db_ip=$(sqlite3 "$DB_FILE" "SELECT ipv4 FROM devices WHERE name = '$device_name';")
     
     if [[ -z "$db_ip" ]]; then
       LOG_FATAL "Device with name \"$device_name\" not found in the database."
@@ -386,7 +384,7 @@ function resolve_device_ip() {
 
   # Case: Only name is provided
   if [[ -n "$device_name" ]]; then
-    db_ip=$(sqlite3 "$DB_FILE" "SELECT ipv4 FROM devices WHERE name = ?;" "$device_name")
+    db_ip=$(sqlite3 "$DB_FILE" "SELECT ipv4 FROM devices WHERE name = '$device_name';")
     
     if [[ -z "$db_ip" ]]; then
       LOG_FATAL "No device with name \"$device_name\" found in the database."

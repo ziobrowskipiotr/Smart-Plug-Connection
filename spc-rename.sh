@@ -83,7 +83,7 @@ if ! validate_device_name "$NEW_NAME"; then
 fi
 
 # Check if the new name is already taken
-if sqlite3 "$DB_FILE" "SELECT id FROM devices WHERE name = ?;" "$NEW_NAME" | grep -q .; then
+if sqlite3 "$DB_FILE" "SELECT id FROM devices WHERE name = '$NEW_NAME';" | grep -q .; then
     LOG_FATAL "The name \"$NEW_NAME\" is already in use by another device."
 fi
 
@@ -99,7 +99,7 @@ fi
 
 # Now that we have a confirmed IP, we fetch the ID and current name from the DB.
 # We need the ID for a safe renaming operation.
-DEVICE_INFO=$(sqlite3 -separator '|' "$DB_FILE" "SELECT id, name FROM devices WHERE ipv4 = ?;" "$TARGET_IP")
+DEVICE_INFO=$(sqlite3 -separator '|' "$DB_FILE" "SELECT id, name FROM devices WHERE ipv4 = '$TARGET_IP';")
 
 if [[ -z "$DEVICE_INFO" ]]; then
     # This might happen if resolve_device_ip returned an IP that isn't actually in the DB 
@@ -114,7 +114,7 @@ CURRENT_DISPLAY_NAME=$(echo "$DEVICE_INFO" | cut -d'|' -f2)
 # --- Perform Rename ---
 LOG_DEBUG "Renaming device \"$CURRENT_DISPLAY_NAME\" (ID: $DEVICE_ID, IP: $TARGET_IP) to \"$NEW_NAME\"..."
 
-sqlite3 "$DB_FILE" "UPDATE devices SET name = ? WHERE id = ?;" "$NEW_NAME" "$DEVICE_ID"
+sqlite3 "$DB_FILE" "UPDATE devices SET name = '$NEW_NAME' WHERE id = $DEVICE_ID;"
 
 # --- Confirmation ---
 if [[ $? -eq 0 ]]; then

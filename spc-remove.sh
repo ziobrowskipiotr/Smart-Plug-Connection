@@ -46,7 +46,7 @@ if [[ -z "$TARGET_IP" ]]; then
 fi
 
 # Now that we have the definitive IP, get the device details for removal
-DEVICE_INFO=$(sqlite3 -separator '|' "$DB_FILE" "SELECT id, name FROM devices WHERE ipv4 = ?;" "$TARGET_IP")
+DEVICE_INFO=$(sqlite3 -separator '|' "$DB_FILE" "SELECT id, name FROM devices WHERE ipv4 = '$TARGET_IP';")
 
 if [[ -z "$DEVICE_INFO" ]]; then
     LOG_FATAL "Could not find device details in database for IP \"$TARGET_IP\". The database might be out of sync."
@@ -64,7 +64,7 @@ if [[ ! "$CONFIRM" =~ ^[yY](es)?$ ]]; then
 fi
 
 # Delete using the unique ID
-sqlite3 "$DB_FILE" "DELETE FROM devices WHERE id = ?;" "$DEVICE_ID"
+sqlite3 "$DB_FILE" "DELETE FROM devices WHERE id = $DEVICE_ID;"
 if [[ $? -ne 0 ]]; then
   LOG_FATAL "Failed to remove device \"$DEVICE_NAME\" (id=$DEVICE_ID)."
 fi

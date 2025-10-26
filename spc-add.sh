@@ -59,7 +59,7 @@ if ! validate_device_name "$NAME"; then
 fi
 
 # Check if the name is already in the database
-if sqlite3 "$DB_FILE" "SELECT name FROM devices WHERE name = ?;" "$NAME" | grep -q .; then
+if sqlite3 "$DB_FILE" "SELECT name FROM devices WHERE name = '$NAME';" | grep -q .; then
   LOG_FATAL "Device with name \"$NAME\" is already in the database"
 fi
 
@@ -80,7 +80,7 @@ if ! is_ip_in_same_subnet "$IP" "$connector_ip_and_mask"; then
 fi
 
 # Check if the IP address is already in the database
-if sqlite3 "$DB_FILE" "SELECT ipv4 FROM devices WHERE ipv4 = ?;" "$IP" | grep -q .; then
+if sqlite3 "$DB_FILE" "SELECT ipv4 FROM devices WHERE ipv4 = '$IP';" | grep -q .; then
   LOG_FATAL "Device with IP address \"$IP\" is already in the database"
   exit 1
 fi
@@ -115,14 +115,14 @@ LOG_DEBUG "Smartplug with IP address \"$IP\" is available"
 if (check_MAC_in_db "$MAC_ADDRESS"); then
     LOG_DEBUG "Device with MAC address $MAC_ADDRESS is already in the database"
     LOG_DEBUG "Changing name and IP address of the device..."
-    sqlite3 "$DB_FILE" "UPDATE devices SET ipv4 = ?, name = ? WHERE mac = ?;" "$IP" "$NAME" "$MAC_ADDRESS"
+    sqlite3 "$DB_FILE" "UPDATE devices SET ipv4 = '$IP', name = '$NAME' WHERE mac = '$MAC_ADDRESS';"
     if [ $? -ne 0 ]; then
         LOG_FATAL "Failed to update the device in the database."
     fi
     LOG_DEBUG "Device updated successfully."
 else
     LOG_DEBUG "Adding device to the database..."
-    sqlite3 "$DB_FILE" "INSERT INTO devices (name, ipv4, mac) VALUES (?, ?, ?);" "$NAME" "$IP" "$MAC_ADDRESS"
+    sqlite3 "$DB_FILE" "INSERT INTO devices (name, ipv4, mac) VALUES ('$NAME', '$IP', '$MAC_ADDRESS');"
     if [ $? -ne 0 ]; then
         LOG_FATAL "Failed to add the device to the database."
     fi

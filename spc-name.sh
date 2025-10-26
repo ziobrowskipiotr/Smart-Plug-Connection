@@ -73,7 +73,7 @@ if [[ -z "$TARGET_IP" ]]; then
 fi
 
 # Now that we have a confirmed IP, we fetch the name from the DB.
-DEVICE_NAME=$(sqlite3 "$DB_FILE" "SELECT name FROM devices WHERE ipv4 = ?;" "$TARGET_IP")
+DEVICE_NAME=$(sqlite3 "$DB_FILE" "SELECT name FROM devices WHERE ipv4 = '$TARGET_IP';")
 
 if [[ -z "$DEVICE_NAME" ]]; then
     LOG_FATAL "Device with IP \"$TARGET_IP\" not found in the database."

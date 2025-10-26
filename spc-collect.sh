@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "$( realpath "${BASH_SOURCE[0]}" )" )" &> /dev/null && pwd )"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
@@ -6,14 +6,12 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 source "$SCRIPT_DIR/spc-helpers.sh"
 cd "$PROJECT_ROOT" || exit 1
 
-devices=$(sqlite3 "$DB_FILE" "SELECT name FROM devices;")
-
 LOG_INFO "Collecting Tasmota energy totals..."
 
-for dev in $devices; do
+sqlite3 "$DB_FILE" "SELECT name FROM devices;" | while read -r dev; do
     LOG_INFO "Processing device: $dev"
 
-    # update ipv4 by MAC (your function)
+    # update ipv4 by MAC
     ip=$(find_and_update_ip_by_mac "$dev")
     if [[ -z "$ip" ]]; then
         LOG_WARN "$dev offline. Skipping."
@@ -37,8 +35,7 @@ for dev in $devices; do
     fi
 
     LOG_DEBUG "Energy total for $dev = $energy"
-
-    # Insert measurement
+- this query is compatible with your sqlite3 version
     sqlite3 "$DB_FILE" \
       "INSERT INTO measurements(device_id, energy_total)
        VALUES((SELECT id FROM devices WHERE name = '$dev'), $energy);"

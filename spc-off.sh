@@ -53,7 +53,7 @@ fi
 
 # If only NAME is provided, resolve IP from the database
 if [[ -n "$NAME" && -z "$IP" ]]; then
-  IP=$(sqlite3 "$DB_FILE" "SELECT ipv4 FROM devices WHERE name = ?;" "$NAME")
+  IP=$(sqlite3 "$DB_FILE" "SELECT ipv4 FROM devices WHERE name = '$NAME';")
   if [[ -z "$IP" ]]; then
     LOG_FATAL "No device with name '$NAME' found in the database."
   fi
@@ -61,7 +61,7 @@ fi
 
 # If both NAME and IP are provided, verify they match what's in DB (if present)
 if [[ -n "$NAME" && -n "$IP" ]]; then
-  DB_IP=$(sqlite3 "$DB_FILE" "SELECT ipv4 FROM devices WHERE name = ?;" "$NAME")
+  DB_IP=$(sqlite3 "$DB_FILE" "SELECT ipv4 FROM devices WHERE name = '$NAME';")
   # If the name is found in the DB, check if the IP matches
   if [[ -n "$DB_IP" && "$DB_IP" != "$IP" ]]; then
     LOG_ERROR "Given name '$NAME' maps to IP '$DB_IP' in the database, but IP '$IP' was provided."
