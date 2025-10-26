@@ -19,7 +19,6 @@ show_usage() {
 	echo
 	echo "Example: $0 on --name myplug"
 	echo "To make 'spc' available system-wide, create a symlink to this file in your PATH, e.g.:"
-	echo "  ln -s $SCRIPT_DIR/spc.sh ~/.local/bin/spc"
 }
 
 if [[ $# -eq 0 ]]; then
@@ -33,16 +32,6 @@ shift
 # Special-case: help for a subcommand
 if [[ "$CMD" == "-h" || "$CMD" == "--help" || "$CMD" == "help" ]]; then
 	show_usage
-	exit 0
-fi
-
-# Implement a small convenience 'install' command to symlink to ~/.local/bin
-if [[ "$CMD" == "install" ]]; then
-	TARGET_DIR="${HOME}/.local/bin"
-	mkdir -p "$TARGET_DIR"
-	ln -sf "$SCRIPT_DIR/spc.sh" "$TARGET_DIR/spc"
-	echo "Installed spc -> $TARGET_DIR/spc"
-	echo "Make sure $TARGET_DIR is in your PATH (add 'export PATH=\"$TARGET_DIR:\$PATH\"' to your shell rc)."
 	exit 0
 fi
 

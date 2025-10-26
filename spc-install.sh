@@ -55,7 +55,7 @@ fi
 info "Adjusting permissions for scripts in $SPC_DIR"
 chmod -R u+rwX "$SPC_DIR" || true
 
-# Create user-local bin and symlink dispatcher
+# Create user-local bin
 LOCAL_BIN="$HOME/.local/bin"
 mkdir -p "$LOCAL_BIN"
 chmod u+x "$SCRIPT_PATH" || true
