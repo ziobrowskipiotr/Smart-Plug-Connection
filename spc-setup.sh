@@ -86,7 +86,7 @@ LOG_DEBUG "Now, to complete the setup, you will need an authorization key (auth 
 ENV_FILE="$PROJECT_ROOT/.env"
 if ! file_exists "$ENV_FILE"; then
     LOG_DEBUG "Creating .env file..."
-    echo "KEY=EXAMPLE_KEY" > "$ENV_FILE"
+       echo "KEY=EXAMPLE_KEY" > "$ENV_FILE"
 fi
 
 if ! file_exists "$ENV_FILE"; then
@@ -111,16 +111,14 @@ LOG_DEBUG "    - You will see this key only once... make sure you copy it now!"
 LOG_DEBUG "    - if you lose it, you will need to generate a new one and revoke the old one"
 LOG_DEBUG "    - copy the generated key (starts with 'tskey-...')"
 LOG_DEBUG "  3. Paste the key into the .env file in the ~/Smart-Plug-Connection directory"
+
 # Wait for user confirmation (only if running interactively or INTERACTIVE=1)
 if [ "$INTERACTIVE" -eq 1 ] || ( [ -t 0 ] && [ -t 1 ] ); then
-    # choose input source: if /dev/tty is readable use it (works when stdin is a pipe)
     INPUT=/dev/tty
     if [ ! -r "$INPUT" ]; then
         INPUT=/dev/stdin
     fi
-
     while true; do
-        # read from chosen input so piping can still work with INTERACTIVE=1
         read -r -p "Have you completed the steps above and pasted the key? (y/n): " answer <"$INPUT"
         case "$answer" in
             [Yy]* ) break;;
@@ -129,21 +127,17 @@ if [ "$INTERACTIVE" -eq 1 ] || ( [ -t 0 ] && [ -t 1 ] ); then
         esac
     done
 else
-    # Non-interactive shell (e.g. curl | bash) - do not loop endlessly
     LOG_INFO "Non-interactive shell detected - skipping interactive confirmation."
     LOG_INFO "When ready, run this script interactively to continue Tailscale setup:"
     echo "  sudo bash '$SCRIPT_DIR/spc-setup.sh'"
     exit 0
 fi
 
-
-# Optionally reset local Tailscale state before logging in
 if [ "$RESET_TAILSCALE" -eq 1 ]; then
     LOG_INFO "Resetting local Tailscale state (logout + remove state files)"
     $SUDO_CMD systemctl start tailscaled
 fi
 
-# Start Tailscale with the provided auth key and advertise the SPC tag
 connector_ip_and_mask=$(get_connector_ip_and_mask)
 if [[ $? -ne 0 || -z "$connector_ip_and_mask" ]]; then
     LOG_DEBUG "Failed to get connector IP and mask."
@@ -155,7 +149,6 @@ if [[ $? -ne 0 || -z "$network_address" ]]; then
     LOG_FATAL "Failed to calculate network address."
 fi
 
-# If an auth key exists in .env, use it; otherwise run interactive tailscale up
 AUTHKEY=$(grep -E '^KEY=' "$ENV_FILE" 2>/dev/null | cut -d '=' -f2- || true)
 if [ -n "$AUTHKEY" ]; then
     LOG_INFO "Using auth key from .env to re-authenticate and apply tags/routes..."
@@ -165,67 +158,48 @@ else
     LOG_FATAL "No auth key found in .env file. Please generate one and add it."
 fi
 
-# Verify Tailscale status
 $SUDO_CMD tailscale status
 if [[ $? -ne 0 ]]; then
     LOG_DEBUG "Tailscale is not running correctly."
     LOG_FATAL "Tailscale is not running correctly. Please check your Tailscale setup."
 fi
 
-# Define schema/database paths (they were used below but not defined)
-SCHEMA_FILE="$SCRIPT_DIR/schema.sql"
-DB_FILE="$SCRIPT_DIR/spc.db"
+# FIXED DB LOCATION
+SCHEMA_FILE="$PROJECT_ROOT/schema.sql"
+DB_FILE="$PROJECT_ROOT/spc.db"
 
-# Check if the database schema file exists
 if (! file_exists "$SCHEMA_FILE"); then
     LOG_DEBUG "Schema file '$SCHEMA_FILE' not found!"
     LOG_FATAL "Schema file '$SCHEMA_FILE' not found!"
 fi
 
-# Initialize the database
 sqlite3 "$DB_FILE" < "$SCHEMA_FILE"
-if [ $? -ne 0 ]; then
-    LOG_DEBUG "Failed to initialize the database."
-    LOG_FATAL "Failed to initialize the database."
-fi
+chown "$ORIG_USER:$ORIG_USER" "$DB_FILE"
+
 LOG_DEBUG "Database '$DB_FILE' initialized successfully."
 
-# Define the target directory in the original user's home
-USER_BIN_DIR="$ORIG_HOME/bin"
-
-LOG_DEBUG "Ensuring '$USER_BIN_DIR' exists for user '$ORIG_USER'..."
-# Use run_as_user to create the directory if it doesn't exist
-run_as_user "mkdir -p '$USER_BIN_DIR'"
-
-# Check if the directory was created successfully (also run as user)
-if ! run_as_user "test -d '$USER_BIN_DIR'"; then
-    LOG_DEBUG "Failed to create directory $USER_BIN_DIR for user $ORIG_USER"
-    LOG_FATAL "Failed to create directory $USER_BIN_DIR for user $ORIG_USER"
-fi
-
-# Create or update symbolic link in the user's bin directory
-# Use -sf to force overwrite if it exists, preventing errors on re-runs
-LOG_DEBUG "Creating symbolic link from '$SCRIPT_DIR/spc.sh' to '$USER_BIN_DIR/spc'"
-run_as_user "ln -sf '$SCRIPT_DIR/spc.sh' '$USER_BIN_DIR/spc'"
-
-# --- Added: also install into ~/.local/bin and ensure PATH (bez kasowania Twojej logiki powyżej)
+# FIXED INSTALL LOCATION
 USER_LOCAL_BIN="$ORIG_HOME/.local/bin"
+
 LOG_DEBUG "Ensuring '$USER_LOCAL_BIN' exists for user '$ORIG_USER'..."
 run_as_user "mkdir -p '$USER_LOCAL_BIN'"
-LOG_DEBUG "Creating symbolic link from '$SCRIPT_DIR/spc.sh' to '$USER_LOCAL_BIN/spc'"
-run_as_user "ln -sf '$SCRIPT_DIR/spc.sh' '$USER_LOCAL_BIN/spc'"
 
-# Ensure PATH contains ~/.local/bin for the user
+# WRAPPER INSTEAD OF SYMLINK
+WRAPPER="$USER_LOCAL_BIN/spc"
+LOG_DEBUG "Creating wrapper script at '$WRAPPER'"
+run_as_user "cat > '$WRAPPER' <<EOF
+#!/usr/bin/env bash
+bash \"$PROJECT_ROOT/spc.sh\" \"\$@\"
+EOF"
+run_as_user "chmod +x '$WRAPPER'"
+
 if ! run_as_user "grep -q \"$USER_LOCAL_BIN\" \"$ORIG_HOME/.bashrc\" 2>/dev/null"; then
     LOG_DEBUG "Adding '$USER_LOCAL_BIN' to PATH in $ORIG_HOME/.bashrc"
     run_as_user "echo 'export PATH=\"$USER_LOCAL_BIN:\$PATH\"' >> \"$ORIG_HOME/.bashrc\""
 fi
 
-# Reset Bash's command hash cache to pick up new symlinks right away
-LOG_DEBUG "Resetting Bash command cache (hash -r)"
 run_as_user "hash -r || true"
 
-# Install collector systemd unit
 LOG_DEBUG "$SUDO_CMD cp $SCRIPT_DIR/spc-collect.service /etc/systemd/system/"
 $SUDO_CMD cp "$SCRIPT_DIR/spc-collect.service" /etc/systemd/system/
 LOG_DEBUG "$SUDO_CMD cp $SCRIPT_DIR/spc-collect.timer /etc/systemd/system/"
