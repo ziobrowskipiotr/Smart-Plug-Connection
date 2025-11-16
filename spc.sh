@@ -9,13 +9,23 @@ show_usage() {
 	echo "Usage: $0 <command> [args...]"
 	echo
 	echo "Available commands:"
+
+	# exclude scripts not for directly usage
+	local exclude_pattern="^(collect|helpers|install|logging|setup)$"
+
 	for f in "$SCRIPT_DIR"/spc-*.sh; do
 		[ -e "$f" ] || continue
 		name=$(basename "$f")
 		cmd=${name#spc-}
 		cmd=${cmd%.sh}
+
+		if [[ "$cmd" =~ $exclude_pattern ]]; then
+			continue
+		fi
+
 		echo "  $cmd"
 	done
+
 	echo
 	echo "Example: $0 on --name myplug"
 	echo "To make 'spc' available system-wide, create a symlink to this file in your PATH, e.g.:"
