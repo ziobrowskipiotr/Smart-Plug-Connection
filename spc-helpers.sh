@@ -318,24 +318,23 @@ function find_and_update_ip_by_mac() {
 
   # Extract the IP address from the scan result (it's the first column)
   found_ip=$(echo "$scan_result" | awk '{print $1}')
-
-  if [[ -z "$found_ip" ]]; then
-    LOG_ERROR "Could not parse IP address from arp-scan result for MAC $mac_address."
-    echo "" # Return empty string on failure
-    return 1
-  fi
-
-  # Update the IP address in the database
-  LOG_INFO "Device found at new IP: $found_ip. Updating database..."
-  sqlite3 "$DB_FILE" "UPDATE devices SET ipv4 = '$found_ip' WHERE name = '$device_name';"
   
-  if [[ $? -ne 0 ]]; then
-    LOG_ERROR "Failed to update IP address in the database for device \"$device_name\"."
-    echo "" # Return empty string on failure
-    return 1
+  # Read old IP from database
+  local old_ip
+  old_ip=$(sqlite3 "$DB_FILE" "SELECT ipv4 FROM devices WHERE name = '$device_name';")
+
+  if [[ "$old_ip" != "$found_ip" ]]; then
+    LOG_INFO "Device found at new IP: $found_ip. Updating database..."
+    sqlite3 "$DB_FILE" "UPDATE devices SET ipv4 = '$found_ip' WHERE name = '$device_name';"
+    
+    if [[ $? -ne 0 ]]; then
+      LOG_ERROR "Failed to update IP address in the database for device \"$device_name\"."
+      echo ""
+      return 1
+    fi
   fi
 
-  # Return the newly found IP address
+  # Return founded IP
   echo "$found_ip"
   return 0
 }
