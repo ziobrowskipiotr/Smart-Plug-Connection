@@ -18,8 +18,8 @@ Timestamp formats accepted: epoch seconds (e.g. 1666699200) or any format accept
 
 Options:
 	--name <name>      Device name (required)
-	--from <time>      Start time (required)
-	--to <time>        End time (optional; default = latest measurement)
+    --from "<time>"      Start time in quotation marks (required)
+    --to "<time>"        End time in quotation marks (optional; default = latest measurement)
 	--ip <ip_address>  Device IP (optional; used together with --name for validation)
 	-h, --help         Show this help and exit
 EOF
@@ -110,7 +110,7 @@ fi
 TARGET_IP=$(resolve_device_ip "$NAME" "$IP")
 
 # Get device_id from database
-DEVICE_ID=$(sqlite3 "$DB_FILE" "SELECT id FROM devices WHERE name = ?;" "$NAME")
+DEVICE_ID=$(sqlite3 "$DB_FILE" "SELECT id FROM devices WHERE name = '$NAME';")
 if [[ -z "$DEVICE_ID" ]]; then
 	LOG_FATAL "Device '$NAME' not found in database."
 fi
@@ -122,16 +122,14 @@ get_nearest_measurement() {
 
 	# Query: return energy_total and timestamp separated by |; nearest by absolute seconds diff
 	sqlite3 -separator '|' "$DB_FILE" \
-		"SELECT energy_total, timestamp FROM measurements WHERE device_id = ? ORDER BY abs(strftime('%s', timestamp) - strftime('%s', ?)) LIMIT 1;" \
-		"$device_id" "$target_ts"
+		"SELECT energy_total, timestamp FROM measurements WHERE device_id = $device_id ORDER BY abs(strftime('%s', timestamp) - strftime('%s', '$target_ts')) LIMIT 1;"
 }
 
 # Helper to get latest measurement
 get_latest_measurement() {
 	local device_id="$1"
 	sqlite3 -separator '|' "$DB_FILE" \
-		"SELECT energy_total, timestamp FROM measurements WHERE device_id = ? ORDER BY strftime('%s', timestamp) DESC LIMIT 1;" \
-		"$device_id"
+		"SELECT energy_total, timestamp FROM measurements WHERE device_id = $device_id ORDER BY strftime('%s', timestamp) DESC LIMIT 1;"
 }
 
 # Get from-measurement

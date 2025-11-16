@@ -317,7 +317,7 @@ function find_and_update_ip_by_mac() {
   fi
 
   # Extract the IP address from the scan result (it's the first column)
-  found_ip=$(echo "$scan_result" | awk '{print $1}')
+  found_ip=$(echo "$scan_result" | head -n 1 | awk '{print $1}')
   
   # Read old IP from database
   local old_ip
