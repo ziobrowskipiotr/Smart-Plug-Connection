@@ -56,12 +56,6 @@ fi
 DEVICE_ID=$(echo "$DEVICE_INFO" | cut -d'|' -f1)
 DEVICE_NAME=$(echo "$DEVICE_INFO" | cut -d'|' -f2)
 
-# Confirm removal
-read -p "Are you sure you want to remove device \"$DEVICE_NAME\" (id=$DEVICE_ID) from IP $TARGET_IP? (y/N): " CONFIRM
-if [[ ! "$CONFIRM" =~ ^[yY](es)?$ ]]; then
-  exit 0
-fi
-
 # Delete using the unique ID
 sqlite3 "$DB_FILE" "DELETE FROM devices WHERE id = $DEVICE_ID;"
 if [[ $? -ne 0 ]]; then
